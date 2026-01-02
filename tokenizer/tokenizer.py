@@ -26,7 +26,7 @@ PUNCT_PATTERN = re.compile(r"[^\w\s\u0600-\u06FF]") # هر چیزی که نه ح
 # کاهش حروف تکراری
 def normalize_repeated_chars(text: str) -> str:
     """حروف تکراری پشت سر هم را به دو تا کاهش می‌دهد"""
-    return re.sub(r"(.)\1{2,}", r"\1\1", text)
+    return re.sub(r"(.)\1{2,}", r"\1", text)
 
 def clean_text(text: str) -> str:
     """متن را پاکسازی می‌کند"""
