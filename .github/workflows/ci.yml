@@ -1,0 +1,11 @@
+name: Testing
+on: push
+
+jobs:
+  test_tokenizer_and_vocab_builder:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - name: Test tokenizer
+      run: |
+        python3 tests/test_tokenizer_and_vocab_builder/tokenizer_test.py
