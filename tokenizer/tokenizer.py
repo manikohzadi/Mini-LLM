@@ -1,10 +1,10 @@
-import re # اضافه کردن کتابخانه regular expression برای بخش استفاده از الگو ها در text-cleaning
-from typing import List # اضافه کردن کتابخانه typing برای اضافه کردن type annotations به توابع و بالا بردن خوانایی کد
+import re  # اضافه کردن کتابخانه regular expression برای بخش استفاده از الگو ها در text-cleaning
+from typing import List  # اضافه کردن کتابخانه typing برای اضافه کردن type annotations به توابع و بالا بردن خوانایی کد
 
 # الگوها
-URL_PATTERN = re.compile(r"(https?://\S+|www\.\S+)", re.IGNORECASE) # این الگو تمام لینک‌های شروع‌شده با http://, https:// یا www. را در متن پیدا می‌کند، بدون توجه به حروف بزرگ و کوچک.
-EMAIL_PATTERN = re.compile(r"[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}", re.IGNORECASE) # این الگو هر آدرس ایمیلی را که شامل نام کاربری، علامت @ و دامنه معتبر باشد پیدا می‌کند، بدون توجه به حروف بزرگ و کوچک.
-HTML_TAG_PATTERN = re.compile(r"<[^>]+>") # این الگو هر تگ HTML را که با < شروع و با > پایان می‌یابد پیدا می‌کند، بدون توجه به محتوای داخلی تگ.
+URL_PATTERN = re.compile(r"(https?://\S+|www\.\S+)", re.IGNORECASE)
+EMAIL_PATTERN = re.compile(r"[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}", re.IGNORECASE)
+HTML_TAG_PATTERN = re.compile(r"<[^>]+>")
 EMOJI_PATTERN = re.compile(
     "["
     "\U0001F600-\U0001F64F"
@@ -17,16 +17,16 @@ EMOJI_PATTERN = re.compile(
     "\U00002B00-\U00002BFF"
     "]+",
     flags=re.UNICODE,
-) # این الگو تمام ایموجی‌ها و نمادهای یونیکد تصویری داخل متن را پیدا یا حذف می‌کند با استفاده از unicode-ranges
+)
 
-# علائم نگارشی (اضافه کردن علائم رایج فارسی)
-PUNCT_PATTERN = re.compile(r"[^\w\s\u0600-\u06FF]") # هر چیزی که نه حرف، نه عدد، نه فاصله، و نه حروف فارسی باشد را پیدا می‌کند
-
+# علائم نگارشی (فارسی و انگلیسی) - توکن جدا
+PUNCT_PATTERN = re.compile(r"([،؛؟!?.،؛«»…—\-]+)")
 
 # کاهش حروف تکراری
 def normalize_repeated_chars(text: str) -> str:
-    """حروف تکراری پشت سر هم را به دو تا کاهش می‌دهد"""
+    """حروف تکراری پشت سر هم را به یک تا کاهش می‌دهد"""
     return re.sub(r"(.)\1{2,}", r"\1", text)
+
 
 def clean_text(text: str) -> str:
     """متن را پاکسازی می‌کند"""
@@ -35,13 +35,15 @@ def clean_text(text: str) -> str:
     text = URL_PATTERN.sub(" ", text)
     text = EMAIL_PATTERN.sub(" ", text)
     text = EMOJI_PATTERN.sub(" ", text)
-    text = PUNCT_PATTERN.sub(" ", text)
+    text = re.sub(r"\s+", " ", text)  # فاصله‌ها را استاندارد می‌کند
     text = normalize_repeated_chars(text)
-    text = re.sub(r"\s+", " ", text).strip()
-    return text
+    return text.strip()
+
 
 def tokenize(text: str) -> List[str]:
-    """توکنایزر word-level برای فارسی مبتنی بر فاصله"""
-    cleaned = clean_text(text)
-    tokens = cleaned.split()
+    """توکنایزر word-level برای فارسی مبتنی بر فاصله و علائم نگارشی"""
+    text = clean_text(text)
+    # جدا کردن علائم نگارشی از کلمات
+    text = PUNCT_PATTERN.sub(r" \1 ", text)
+    tokens = text.split()
     return tokens
