@@ -39,15 +39,22 @@ def normalize_repeated_chars(text: str) -> str:
     """حروف تکراری پشت سر هم را به یک تا کاهش می‌دهد"""
     return re.sub(r"(.)\1{2,}", r"\1", text)
 
+def normalize_persian_unicode(text: str) -> str:
+    # حذف کشیده (Tatweel)
+    text = text.replace("\u0640", "")
+    # حذف نیم‌فاصله (ZWNJ)
+    text = text.replace("\u200c", "")
+    return text
 
 def clean_text(text: str) -> str:
     """متن را پاکسازی می‌کند"""
     text = text.lower()
+    text = normalize_persian_unicode(text)
     text = HTML_TAG_PATTERN.sub(" ", text)
     text = URL_PATTERN.sub(" ", text)
     text = EMAIL_PATTERN.sub(" ", text)
     text = EMOJI_PATTERN.sub(" ", text)
-    text = re.sub(r"\s+", " ", text)  # فاصله‌ها را استاندارد می‌کند
+    text = re.sub(r"\s+", " ", text)
     text = normalize_repeated_chars(text)
     return text.strip()
 
