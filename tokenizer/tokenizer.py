@@ -1,6 +1,6 @@
 import re  # اضافه کردن کتابخانه regular expression برای بخش استفاده از الگو ها در text-cleaning
 from typing import List  # اضافه کردن کتابخانه typing برای اضافه کردن type annotations به توابع و بالا بردن خوانایی کد
-from punctuation_list import punctuation
+from tokenizer.punctuation_list import punctuation
 
 punctuation_set = set(punctuation)
 
@@ -56,6 +56,6 @@ def tokenize(text: str) -> List[str]:
     """توکنایزر word-level برای فارسی مبتنی بر فاصله و علائم نگارشی"""
     text = clean_text(text)
     # جدا کردن علائم نگارشی از کلمات
-    text = PUNCT_PATTERN.sub(r" \1 ", text)
+    text = separate_punctuations(text)
     tokens = text.split()
     return tokens
