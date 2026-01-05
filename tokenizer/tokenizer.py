@@ -1,5 +1,8 @@
 import re  # اضافه کردن کتابخانه regular expression برای بخش استفاده از الگو ها در text-cleaning
 from typing import List  # اضافه کردن کتابخانه typing برای اضافه کردن type annotations به توابع و بالا بردن خوانایی کد
+from punctuation_list import punctuation
+
+punctuation_set = set(punctuation)
 
 # الگوها
 URL_PATTERN = re.compile(r"(https?://\S+|www\.\S+)", re.IGNORECASE)
@@ -20,7 +23,16 @@ EMOJI_PATTERN = re.compile(
 )
 
 # علائم نگارشی (فارسی و انگلیسی) - توکن جدا
-PUNCT_PATTERN = re.compile(r"([،؛؟!?.،؛«»…—\-]+)")
+def separate_punctuations(text):
+    text_list = []
+
+    for character in text:
+        if character in punctuation_set:
+            text_list.append(f" {character} ")
+        else:
+            text_list.append(character)
+
+    return ''.join(text_list)
 
 # کاهش حروف تکراری
 def normalize_repeated_chars(text: str) -> str:
