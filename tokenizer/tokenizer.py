@@ -4,11 +4,19 @@ from tokenizer.punctuation_list import punctuation  # اضافه کردن لیس
 
 punctuation_set = set(punctuation)  # تبدیل بیست علائم نگارشی به set برای سریعتر شدن جست و جو در آن به دلیل استفاده set از hash table
 
+
+    # توضیحات قبل از ورود به کد برای regex:
+    # انواع گروه ها عبارت اند از:
+    #     1. Capturing group (گروه ساده و معمولی)
+    #     2. Non-Capturing group (گروهی که اگر با چیزی match شد یا نشد در خروجی ذخیره نمی شود یعنی در findall یا group معلوم نمی شود) (مزیتش اینه که سریع تر از گروه عادیه و برا وقتیه که می خوایم فقط ببینیم با الگو مطابقت داره یا نه)
+    #     3. Named Capturing group (همون گروه معمولی هست ولی دارای یک اسم است) (مزیتش اینه که وقتی رجکس خیلی یلند شد بتوانیم ببینیم مثلا آیا در متن fragment یافت شد یا نه و اگر یافت شد اون چی بود)
+
+
 URL_PATTERN = re.compile( # این تابع یک الگو را به Pattern Object تبدیل می کند که بتوانیم از آن هزار بار و خیلی سریعتر استفاده کنیم
     r"""
         (?P<scheme> # Named capturing group با اسم scheme
-            [a-zA-Z] # شروع با حروف بزرگ و کوچک انگلیسی
-            [a-zA-Z0-9+.-]* # ادامه‌ی مجاز scheme که می تواند شامل حروف بزرگ و کوچک و اعداد انگلیسی و علامت های +.- باشد
+            [a-z] # شروع با حروف بزرگ و کوچک انگلیسی
+            [a-z0-9+.-]* # ادامه‌ی مجاز scheme که می تواند شامل حروف بزرگ و کوچک و اعداد انگلیسی و علامت های +.- باشد
         ):// # جدا کننده scheme که آن را با دامنه جدا می کند
 
     (?: # Non capturing group : در خروجی ذخیره نمی شود
@@ -40,12 +48,12 @@ URL_PATTERN = re.compile( # این تابع یک الگو را به Pattern Obje
         | # یا
         (?P<domain> # Named capturing group با اسم domain
             (?:
-                [a-zA-Z0-9] # شروع دامنه که می تونه با حروف بزرگ و کوچک و اعداد انگلیسی باشه
-                [a-zA-Z0-9\-]{0,61} # وسط دامنه که مثل بالا است و می تواند شامل علامت dash باشد و تا طول بین 0 تا 61 کاراکتر ادامه داشته باشد.
-                [a-zA-Z0-9] # انتهای دامنه که مثل همون شروع دامنه است
+                [a-z0-9] # شروع دامنه که می تونه با حروف بزرگ و کوچک و اعداد انگلیسی باشه
+                [a-z0-9-]{0,61} # وسط دامنه که مثل بالا است و می تواند شامل علامت dash باشد و تا طول بین 0 تا 61 کاراکتر ادامه داشته باشد.
+                [a-z0-9] # انتهای دامنه که مثل همون شروع دامنه است
                 \. # خود علامت نقطه
             )+ # این می تونه 1 یا بیشتر بار تکرار بشه
-            [a-zA-Z]{2,63} # TLD مثل com, org, و ir که فقط می تونه شامل حروف بزرگ و کوچک انگلیسی باشه و تا طول بین 2 تا 63 کاراکتر ادامه داشته باشه.
+            [a-z]{2,63} # TLD مثل com, org, و ir که فقط می تونه شامل حروف بزرگ و کوچک انگلیسی باشه و تا طول بین 2 تا 63 کاراکتر ادامه داشته باشه.
         )
     )
 
@@ -73,26 +81,36 @@ EMAIL_PATTERN = re.compile(
     r"""
     (?P<local> # بخش local-part
         (?:                             
-            [a-zA-Z0-9!#$%&'*+/=?^_`{|}~-]+
-            (?:\.[a-zA-Z0-9!#$%&'*+/=?^_`{|}~-]+)*
-        |
-            "(?:\\[\x00-\x7F]|[^"\\])*"
+            [a-z0-9!#$%&'*+/=?^_`{|}~-]+ # می تونه شامل چیز های زیر باشه:
+            #       حروف بزرگ و کوچک انگلیسی
+            #       اعداد 0 تا 9 انگلیسی
+            #       نماد های روی کیبورد
+            (?:\.[a-z0-9!#$%&'*+/=?^_`{|}~-]+)* # اول یک نقطه باشه بعدش هم توضیحات مثل بالا و می تونه تعداد تکرارش صفر یا بیشتر باشه
+        | # یا
+            "(?:
+            \\ # علامت اسلش
+            [\x00-\x7F] # بازه کاراکتر های اسکی
+            | # یا
+            [^"\\])*" # هر چیزی غیر از دابل کوتیشن و اسلش
         )
     )
     @ # جداکننده
     (?P<domain> # بخش دامنه
         (?:                             
-            [a-zA-Z0-9]
-            (?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?
-            (?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*
+            [a-z0-9] # شامل حروف بزرگ و کوچک انگلیسی و رقم های 0 تا 9 انگلیسی
+            (?:[a-z0-9-]{0,61}[a-z0-9])? # اول (توضیحات مثل بالا) بعد این باید طولش بین 0 تا 61 باشه و  می تونه شامل علامت dash هم بشه و دوباره توضیحات مثل بالا. این بخش کلا (اختیاری) است.
+            (?:
+            \.[a-z0-9] # اولش یک نقطه باشه بعدش هم یک حرف بزرگ یا کوچک انگلیسی یا رقمی بین 0 تا 9
+            (?:[a-z0-9-]{0,61}[a-z0-9])? # توضیحات مثل توضیح بالاتر
+            )* # این بخش می تونه طولش 0 یا بیشتر باشه
         )
-        \.[a-zA-Z]{2,63} # TLD
+        \.[a-z]{2,63} # TLD : که اولش باید یک نقطه باشد و فقط می تونه شامل حروف کوچک انگلیسی باشه و طولش باید بین 2 تا 63 باشه
     )
     """,
     re.VERBOSE | re.IGNORECASE
 )
 
-HTML_TAG_PATTERN = re.compile(r"<[^>]+>")
+HTML_TAG_PATTERN = re.compile(r"<[^>]+>") # باید باleft angle bracket شروع شه و بعدش هر چیزی غیر از right angle bracket باشه و در نهایت با right angle bracket تموم بشه
 EMOJI_PATTERN = re.compile(
     "["
     "\U0001F600-\U0001F64F"
@@ -105,125 +123,131 @@ EMOJI_PATTERN = re.compile(
     "\U00002B00-\U00002BFF"
     "]+",
     flags=re.UNICODE,
-)
+)# ساخت الگوی تشخیص ایموجی با استفاده از unicode ranges
 
-# ===== Preprocessing Functions =====
 
-def separate_punctuations(text):
-    text_list = []
-    for character in text:
-        if character in punctuation_set:
-            text_list.append(f" {character} ")
-        else:
-            text_list.append(character)
-    return ''.join(text_list)
+def separate_punctuations(text: str) -> str:
+    """این تابع قبل و بعد از تمام علائم نگارشی درون متن یک فاصله می گذارد"""
+    processed_text = "" # متن پردازش شده
+    for character in text: # حلقه زدن روی تک به تک کاراکتر های داخل متن
+        if character in punctuation_set: # بررسی کردن اینکه اون کاراکتر  یک علامت نگارشی باشه
+            processed_text += f" {character} " # اگر بله اون رو باید یک فاصله قبل و بعدش به متن پردازش شده اضافه می کنیم
+        else: # اگر خیر
+            processed_text += character # عادی اون را اضافه می کنیم
+    return processed_text # برگرداندن متن پردازش شده
 
 def normalize_repeated_chars(text: str) -> str:
     """حروف تکراری پشت سر هم را به یک تا کاهش می‌دهد"""
     return re.sub(r"(.)\1{2,}", r"\1", text)
 
 def normalize_persian_unicode(text: str) -> str:
-    text = text.replace("\u0640", "")
-    text = text.replace("\u200c", "")
-    return text
+    text = text.replace("\u0640", "") # حذف tatweel که برای کشیدن حروف استفاده میشه
+    text = text.replace("\u200c", "") # حذف ZWNJ یا همون نیم فاصله
+    text = text.replace("ئ", "ی")
+    text = text.replace("ك", "ک")
+    text = text.replace("ي", 'ی')
+    text = text.replace("ة", 'ت')
+    text = text.replace("ۃ", 'ت')
+
+    return text # برگرداندن متن
 
 def clean_text(text: str) -> str:
     """متن را پاکسازی می‌کند"""
-    text = text.lower()
-    text = normalize_persian_unicode(text)
-    text = HTML_TAG_PATTERN.sub(" ", text)
-    text = URL_PATTERN.sub(" ", text)
-    text = EMAIL_PATTERN.sub(" ", text)
-    text = EMOJI_PATTERN.sub(" ", text)
-    text = re.sub(r"\s+", " ", text)
-    text = normalize_repeated_chars(text)
-    return text.strip()
+    text = text.lower() # تقریبا بی اثره ولی فکر کنم می تونه حروف نچسبیده رو به چسبیده تبدیل کنه
+    text = normalize_persian_unicode(text) # نرمال سازی مخصوص فارسی
+    text = HTML_TAG_PATTERN.sub(" ", text) # پاک سازی HTML tag
+    text = URL_PATTERN.sub(" ", text) # پاک سازی URL
+    text = EMAIL_PATTERN.sub(" ", text) # پاک سازی ایمیل
+    text = EMOJI_PATTERN.sub(" ", text) # پاک سازی ایموجی
+    text = re.sub(r"\s+", " ", text) # حذف فاصله های اضافی
+    text = normalize_repeated_chars(text) # نرمال سازی حروف تکراری پشت سر هم
+    return text.strip() # بریدن فاصله ها از دو طرف متن
 
 # ===== BPE Tokenizer =====
 
-class BPETokenizer:
-    """توکنایزر BPE با قابلیت word-level و subword-level برای فارسی"""
+# class BPETokenizer:
+#     """توکنایزر BPE با قابلیت word-level و subword-level برای فارسی"""
 
-    def __init__(self, vocab: Dict[str, int] = None):
-        self.vocab = vocab if vocab else {}
-        self.bpe_merges = {}
+#     def __init__(self, vocab: Dict[str, int] = None):
+#         self.vocab = vocab if vocab else {}
+#         self.bpe_merges = {}
 
-    def get_vocab(self):
-        return self.vocab
+#     def get_vocab(self):
+#         return self.vocab
 
-    def train_bpe(self, texts: List[str], num_merges: int = 1000):
-        """آموزش BPE از متن"""
-        from collections import Counter
-        tokens = []
-        for text in texts:
-            text_clean = clean_text(text)
-            text_clean = separate_punctuations(text_clean)
-            tokens.extend(text_clean.split())
+#     def train_bpe(self, texts: List[str], num_merges: int = 1000):
+#         """آموزش BPE از متن"""
+#         from collections import Counter
+#         tokens = []
+#         for text in texts:
+#             text_clean = clean_text(text)
+#             text_clean = separate_punctuations(text_clean)
+#             tokens.extend(text_clean.split())
 
-        vocab = Counter(tokens)
-        vocab = {word + '</w>': freq for word, freq in vocab.items()}  # end-of-word symbol
+#         vocab = Counter(tokens)
+#         vocab = {word + '</w>': freq for word, freq in vocab.items()}  # end-of-word symbol
 
-        merges = {}
-        for i in range(num_merges):
-            pairs = self.get_stats(vocab)
-            if not pairs:
-                break
-            best = max(pairs, key=pairs.get)
-            vocab = self.merge_vocab(best, vocab)
-            merges[best] = i
-        self.vocab = vocab
-        self.bpe_merges = merges
+#         merges = {}
+#         for i in range(num_merges):
+#             pairs = self.get_stats(vocab)
+#             if not pairs:
+#                 break
+#             best = max(pairs, key=pairs.get)
+#             vocab = self.merge_vocab(best, vocab)
+#             merges[best] = i
+#         self.vocab = vocab
+#         self.bpe_merges = merges
 
-    def get_stats(self, vocab: Dict[str, int]) -> Dict[Tuple[str, str], int]:
-        """شمارش جفت‌های متوالی"""
-        stats = {}
-        for word, freq in vocab.items():
-            symbols = word.split()
-            for i in range(len(symbols) - 1):
-                pair = (symbols[i], symbols[i + 1])
-                stats[pair] = stats.get(pair, 0) + freq
-        return stats
+#     def get_stats(self, vocab: Dict[str, int]) -> Dict[Tuple[str, str], int]:
+#         """شمارش جفت‌های متوالی"""
+#         stats = {}
+#         for word, freq in vocab.items():
+#             symbols = word.split()
+#             for i in range(len(symbols) - 1):
+#                 pair = (symbols[i], symbols[i + 1])
+#                 stats[pair] = stats.get(pair, 0) + freq
+#         return stats
 
-    def merge_vocab(self, pair: Tuple[str, str], vocab: Dict[str, int]) -> Dict[str, int]:
-        """ادغام جفت‌ها در واژه‌نامه"""
-        new_vocab = {}
-        bigram = ' '.join(pair)
-        replacement = ''.join(pair)
-        for word, freq in vocab.items():
-            new_word = word.replace(bigram, replacement)
-            new_vocab[new_word] = freq
-        return new_vocab
+#     def merge_vocab(self, pair: Tuple[str, str], vocab: Dict[str, int]) -> Dict[str, int]:
+#         """ادغام جفت‌ها در واژه‌نامه"""
+#         new_vocab = {}
+#         bigram = ' '.join(pair)
+#         replacement = ''.join(pair)
+#         for word, freq in vocab.items():
+#             new_word = word.replace(bigram, replacement)
+#             new_vocab[new_word] = freq
+#         return new_vocab
 
-    def encode(self, text: str) -> List[str]:
-        text_clean = clean_text(text)
-        text_clean = separate_punctuations(text_clean)
-        tokens = text_clean.split()
-        subwords = []
-        for token in tokens:
-            token += '</w>'
-            i = 0
-            while i < len(token):
-                matched = False
-                for merge in sorted(self.bpe_merges.keys(), key=lambda x: -self.bpe_merges[x]):
-                    merged = ''.join(merge)
-                    if token[i:].startswith(merged):
-                        subwords.append(merged)
-                        i += len(merged)
-                        matched = True
-                        break
-                if not matched:
-                    subwords.append(token[i])
-                    i += 1
-        return subwords
+#     def encode(self, text: str) -> List[str]:
+#         text_clean = clean_text(text)
+#         text_clean = separate_punctuations(text_clean)
+#         tokens = text_clean.split()
+#         subwords = []
+#         for token in tokens:
+#             token += '</w>'
+#             i = 0
+#             while i < len(token):
+#                 matched = False
+#                 for merge in sorted(self.bpe_merges.keys(), key=lambda x: -self.bpe_merges[x]):
+#                     merged = ''.join(merge)
+#                     if token[i:].startswith(merged):
+#                         subwords.append(merged)
+#                         i += len(merged)
+#                         matched = True
+#                         break
+#                 if not matched:
+#                     subwords.append(token[i])
+#                     i += 1
+#         return subwords
 
-    def decode(self, subwords: List[str]) -> str:
-        """بازگرداندن متن اصلی"""
-        text = ''.join(subwords).replace('</w>', ' ')
-        return text.strip()
+#     def decode(self, subwords: List[str]) -> str:
+#         """بازگرداندن متن اصلی"""
+#         text = ''.join(subwords).replace('</w>', ' ')
+#         return text.strip()
 
 def tokenize(text: str) -> List[str]:
-    """توکنایزر word-level برای فارسی مبتنی بر فاصله و علائم نگارشی"""
-    text = clean_text(text)
-    text = separate_punctuations(text)
-    tokens = text.split()
-    return tokens
+    """توکنایزر word-level برای فارسی مبتنی بر فاصله و پاک سازی حرفه ای متن قبل از عملیات توکنایز"""
+    text = clean_text(text) # پاک سازی متن
+    text = separate_punctuations(text) # جدا کردن علائم نگارشی
+    tokens = text.split() # توکنایز کردن مبتنی بر فاصله
+    return tokens # برگرداندن لیست توکن ها
