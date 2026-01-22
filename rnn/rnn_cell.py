@@ -57,13 +57,13 @@ class LSTMCell: # این کلاس نشان دهنده یک سلول LSTM است
         self.W_o = random_matrix(hidden_size, input_size, scale) # وزن برای دروازه خروجی به صورت تصادفی و با مقیاس نرمال و به شکل hidden_size * input_size
         self.W_g = random_matrix(hidden_size, input_size, scale) # وزن برای مقدار جدید حافظه یا cell canditate به صورت تصادفی و با مقیاس نرمال و به شکل hidden_size * input_size
         # Recurrent Weights
-        # چهار ماتریس دیگر برای ارتباطات حالت مخفی مثل حالت قبل
+        # چهار ماتریس دیگر برای ارتباطات حالت مخفی قبلی مثل حالت قبل
         self.U_i = random_matrix(hidden_size, hidden_size, scale) # ورودی
         self.U_f = random_matrix(hidden_size, hidden_size, scale) # فراموشی
         self.U_o = random_matrix(hidden_size, hidden_size, scale) # خروجی
         self.U_g = random_matrix(hidden_size, hidden_size, scale) # مقدار جدید حافظه یا cell canditate
 
-        # peephole connections یا دروازه های چشم درشت
+        # peephole connections یا دروازه های چشم درشت یا ارتباط های پیه پول
         # توضیحات : این ها وزن هایی هستند که به peephole connections معروف اند  که مستقیم به حالت سلولی وصل می شوند تا در تصمیم گیری دروازه ها کمک کنند
         self.V_i = [random.random() * scale for _ in range(hidden_size)] # ورودی
         self.V_f = [random.random() * scale for _ in range(hidden_size)] # فراموشی
@@ -95,10 +95,10 @@ class LSTMCell: # این کلاس نشان دهنده یک سلول LSTM است
         i = [sigmoid(a + b + c * d + e) # تابع فعال سازی برای تنظیم مقدار دروازه بین 0 و 1
             for a, b, c, d, e in zip(
                 matvec_mul(self.W_i, x), # ضرب ماتریس وزن ورودی در ورودی
-                matvec_mul(self.U_i, self.h), # ضرب ماتریس وزن حالت مخفی قبلی input در حالت مخفی فعلی
-                self.V_i, # وزن peephole ارتباط مستقیم با حالت سلولی
-                self.c, # حالت سلولی فعلی
-                self.b_i # بایاس
+                matvec_mul(self.U_i, self.h), # وزن های مربوط به حالت مخفی قبلی  و تاثیر آن بر دروازه ورودی را محاسبه می کند.
+                self.V_i, # این مقادیر نرون های یادآور هستند یعنی حالت سلول قبلی را مستقیما وارد دروازه می کنند تا در تصمیم گیری اثرگذار باشد.
+                self.c, # حالت سلول قبلی که اطلاعات بلندمدت را نگه می دارد
+                self.b_i # بایاس یا دگرگونی پایه که کمک می کند که مدل بهتر و سریعتر آموزش ببینه
         )]
         # forget gate
         # توضیحات مثل دروازه ورودی فقط برای دروازه فراموشی و مشابه دروازه ورودی است ولی برای فراموش کردن معمولا
@@ -134,3 +134,8 @@ class LSTMCell: # این کلاس نشان دهنده یک سلول LSTM است
         # new hidden state
         self.h = [o_t * tanh(c_t) for o_t, c_t in zip(o, self.c)] # آپدیت کردن حالت مخفی فعلی با ضرب هر مقدار دروازه ورودی در تانژانت هایپربولیک هر عضو حالت سلولی
         return self.h # برگرداندن حالت مخفی فعلی 
+
+
+# توضیحات تکمیلی :
+#       می توانیم بگیم که self.c همان حافظه بلند مدت است
+#       می توانیم بگیم که self.h همان حافظه کوتاه مدت است
