@@ -19,62 +19,89 @@ def zeros(shape: Tuple[int, ...]) -> List[List[float]]:
     else: # اگر کاربر shapeی وارد کرده بود که طولش بیشتر از 2 بود مثلا 3 بعدی یا 4 بعدی وارد کرده بود
         raise ValueError("Unsupported shape") # ارور می دهیم چون این تابع فقط آرایه و ماتریس می سازد نه تنسور
 
-def random_matrix(rows: int, cols: int, scale: float = 0.1) -> List[List[float]]:
-    return [[(random.random() * 2 - 1) * scale for _ in range(cols)] for _ in range(rows)]
+def random_matrix(rows: int, cols: int, scale: float = 0.1) -> List[List[float]]: # این تابع برای ساخت وزن های اولیه است
+    """این تابع یک ماتریس تصادفی با سطر و ستون مقیاس دلخواه می سازد"""
+    return [[(random.random() * 2 - 1) * scale # هر سلول = می تونه یک عدد منفی یا مثبت باشه. نکته : هر چقدر عدد تصادفی تولید شده بزرگ تر باشه جواب مثبت در می آید و هر چقدر عدد تصادفی تولید شده کوچکتر باشه جواب منفی در می آید و اگر عدد تصادفی تولید شده 0.5 باشه اون وقت میشه 0
+                for _ in range(cols)] # حلقه زدن روی تعداد ستون ها
+                for _ in range(rows) # حلقه زدن روی تعداد سطر ها
+        ]
+    # اگر scale را مقداری خیلی بزرگ یا خیلی کوچک  بذاریم اونوقت داده هامون خیلی بزرگ یا خیلی کوچک میشن
 
-def matvec_mul(mat: List[List[float]], vec: List[float]) -> List[float]:
-    return [sum(mat[i][j] * vec[j] for j in range(len(vec))) for i in range(len(mat))]
+def matvec_mul(mat: List[List[float]], vec: List[float]) -> List[float]: # این تابع یک ماتریس و بردار را طبق قانون ریاضی اش ضرب می کند
+    if len(mat[0]) != len(vec): # بررسی کردن اینکه طول ها با هم برابر نباشند
+        raise ValueError("باید تعداد ستون های بردار و ماتریس برابر باشد.") # خطا می دهیم چون در دو حالت بزرگی و کوچکی یکی از طول ها کار اشتباه انجام می شود
+    """این تابع یک ماتریس و یک بردار  با هر طول دلخواهی از شما می گیره و حاصل ضرب آنها را به شما می ده و باید تعداد ستون های بردار و ماتریس با هم برابر باشه"""
+    return [sum(mat[i][j] * vec[j] for j in range(len(vec))) for i in range(len(mat))] # این میگه عضو با سطر x و در اول ستون 1 در ماتریس ضرب میشه با عضو با اندیس 1 بردار ما و به همین ترتیب هر سطر که تموم شد میریم سطر بعدی و دوباره کل ستون های آن و بعد ...
 
 def vec_add(v1: List[float], v2: List[float]) -> List[float]:
-    return [v1[i] + v2[i] for i in range(len(v1))]
+    """این تابع عضو های متناظر دو بردار را با هم جمع می کند و بردار حاصل را به شما می دهد"""
+    if len(v1) != len(v2): # بررسی کردن اینکه طول ها با هم برابر نباشند
+        raise ValueError("باید تعداد ستون های بردار و ماتریس برابر باشد.") # خطا می دهیم چون در دو حالت بزرگی و کوچکی یکی از طول ها کار اشتباه انجام می شود
+    return [v1[i] + v2[i] for i in range(len(v1))] # جمع اعضای متناظر دو بردار
 
-def layer_norm(vec: List[float], eps: float = 1e-5) -> List[float]:
-    mean = sum(vec) / len(vec)
-    variance = sum((x - mean) ** 2 for x in vec) / len(vec)
-    return [(x - mean) / math.sqrt(variance + eps) for x in vec]
+def layer_norm(vec: List[float], eps: float = 1e-5) -> List[float]: # این تابع یک بردار را نرمال می کند و کمک می کند شبکه پایدارتر بشه و سریعتر آموزش ببینه
+    mean = sum(vec) / len(vec) # گرفتن میانگین
+    variance = sum((x - mean) ** 2 for x in vec) / len(vec) # گرفتن واریانس طبق فرمول ریاضی اش
+    return [(x - mean) / math.sqrt(variance + eps) for x in vec] # هر عضو داخل  بردار برابر عضو منهای میانگین تقسیم بر رادیکال واریانس + اپسیلون که یک عدد خیلی کوچک است و کاربردش اینه که اگر واریانس صفر شد مثل وقتی که همه داده ها یکسان باشند از تقسیم بر صفر جلوگیری کنیم
 
-class LSTMCell:
+class LSTMCell: # این کلاس نشان دهنده یک سلول LSTM است
     def __init__(self, input_size: int, hidden_size: int):
-        self.input_size = input_size
-        self.hidden_size = hidden_size
+        self.input_size = input_size # تعداد ویژگی(feature) های ورودی
+        self.hidden_size = hidden_size # تعداد نورون های مخفی در سلول یعنی ابعاد حالت مخغی
 
-        scale = math.sqrt(1 / input_size)
-        # weights
-        self.W_i = random_matrix(hidden_size, input_size, scale)
-        self.W_f = random_matrix(hidden_size, input_size, scale)
-        self.W_o = random_matrix(hidden_size, input_size, scale)
-        self.W_g = random_matrix(hidden_size, input_size, scale)
+        # مقدار دهی اولیه وزن ها و پارامتر ها
+        scale = math.sqrt(1 / input_size) # این متغیر مقدار نرمال برای وزن ها است که بر اساس اندازه ورودی محاسبه میشود و برای بهبود آموزش است که کمک می کند وزن ها در بازه مناسب قرار گیرند
+        # Input Weights
+        self.W_i = random_matrix(hidden_size, input_size, scale) # وزن برای دروازه ورودی به صورت تصادفی و با مقیاس نرمال و به شکل hidden_size * input_size
+        self.W_f = random_matrix(hidden_size, input_size, scale) # وزن برای دروازه فراموشی به صورت تصادفی و با مقیاس نرمال و به شکل hidden_size * input_size
+        self.W_o = random_matrix(hidden_size, input_size, scale) # وزن برای دروازه خروجی به صورت تصادفی و با مقیاس نرمال و به شکل hidden_size * input_size
+        self.W_g = random_matrix(hidden_size, input_size, scale) # وزن برای مقدار جدید حافظه یا cell canditate به صورت تصادفی و با مقیاس نرمال و به شکل hidden_size * input_size
+        # Recurrent Weights
+        # چهار ماتریس دیگر برای ارتباطات حالت مخفی مثل حالت قبل
+        self.U_i = random_matrix(hidden_size, hidden_size, scale) # ورودی
+        self.U_f = random_matrix(hidden_size, hidden_size, scale) # فراموشی
+        self.U_o = random_matrix(hidden_size, hidden_size, scale) # خروجی
+        self.U_g = random_matrix(hidden_size, hidden_size, scale) # مقدار جدید حافظه یا cell canditate
 
-        self.U_i = random_matrix(hidden_size, hidden_size, scale)
-        self.U_f = random_matrix(hidden_size, hidden_size, scale)
-        self.U_o = random_matrix(hidden_size, hidden_size, scale)
-        self.U_g = random_matrix(hidden_size, hidden_size, scale)
-
-        # peephole connections
-        self.V_i = [random.random() * scale for _ in range(hidden_size)]
-        self.V_f = [random.random() * scale for _ in range(hidden_size)]
-        self.V_o = [random.random() * scale for _ in range(hidden_size)]
+        # peephole connections یا دروازه های چشم درشت
+        # توضیحات : این ها وزن هایی هستند که به peephole connections معروف اند  که مستقیم به حالت سلولی وصل می شوند تا در تصمیم گیری دروازه ها کمک کنند
+        self.V_i = [random.random() * scale for _ in range(hidden_size)] # ورودی
+        self.V_f = [random.random() * scale for _ in range(hidden_size)] # فراموشی
+        self.V_o = [random.random() * scale for _ in range(hidden_size)] # خروجی
 
         # biases
-        self.b_i = [0.0 for _ in range(hidden_size)]
-        self.b_f = [1.0 for _ in range(hidden_size)]  # forget bias = 1
-        self.b_o = [0.0 for _ in range(hidden_size)]
-        self.b_g = [0.0 for _ in range(hidden_size)]
+        self.b_i = [0.0 for _ in range(hidden_size)] # ورودی
+        self.b_f = [1.0 for _ in range(hidden_size)] # فراموشی : forget bias = 1
+        # نکته مهم در مورد بایاس های فراموشی :
+        #   مقدار اولیه اش 1 است که به شبکه کمک می کند تا از ذخیره سازی اطلاعات جدید راحت تر استفاده کند
+        self.b_o = [0.0 for _ in range(hidden_size)] # خروجی
+        self.b_g = [0.0 for _ in range(hidden_size)] # cell canditate
 
-        # states
-        self.h = [0.0 for _ in range(hidden_size)]
-        self.c = [0.0 for _ in range(hidden_size)]
+        # states یا حالت های اولیه
+        self.h = [0.0 for _ in range(hidden_size)] # حالت مخفی اولیه که از صفر شروع می کنیم
+        self.c = [0.0 for _ in range(hidden_size)] # حالت سلولی اولیه که از صفر شروع می کنیم دوباره
 
-    def forward(self, x: List[float]) -> List[float]:
+    def forward(self, x: List[float]) -> List[float]: # این متد برای پردازش یک توکن ورودی است
+        """
+        این متد برای پردازش یک توکن ورودی است
+        
+        :param self: شی فعلی از این کلاس
+        :param x: لیستی از عدد های به عنوان ویژگی های ورودی
+        :type x: List[float]
+        :return: لیستی از عدد های نشان دهنده حالت مخفی بعدی
+        :rtype: List[float]
+        """
         # input gate
-        i = [sigmoid(a + b + c * d + e) for a, b, c, d, e in zip(
-            matvec_mul(self.W_i, x),
-            matvec_mul(self.U_i, self.h),
-            self.V_i,
-            self.c,
-            self.b_i
+        i = [sigmoid(a + b + c * d + e) # تابع فعال سازی برای تنظیم مقدار دروازه بین 0 و 1
+            for a, b, c, d, e in zip(
+                matvec_mul(self.W_i, x), # ضرب ماتریس وزن ورودی در ورودی
+                matvec_mul(self.U_i, self.h), # ضرب ماتریس وزن حالت مخفی قبلی input در حالت مخفی فعلی
+                self.V_i, # وزن peephole ارتباط مستقیم با حالت سلولی
+                self.c, # حالت سلولی فعلی
+                self.b_i # بایاس
         )]
         # forget gate
+        # توضیحات مثل دروازه ورودی فقط برای دروازه فراموشی و مشابه دروازه ورودی است ولی برای فراموش کردن معمولا
         f = [sigmoid(a + b + c * d + e) for a, b, c, d, e in zip(
             matvec_mul(self.W_f, x),
             matvec_mul(self.U_f, self.h),
@@ -83,14 +110,20 @@ class LSTMCell:
             self.b_f
         )]
         # cell candidate
-        g = [tanh(a + b + e) for a, b, e in zip(
-            matvec_mul(self.W_g, x),
-            matvec_mul(self.U_g, self.h),
-            self.b_g
+        # این قسمت پیشنهاد می دهد چه مقدار اطلاعات جدید به وضعیت سلولی افزوده شود.
+        g = [tanh(a + b + e) # tanh تابع فعال سازی است که مقدارش بین -1 و 1 است.
+                for a, b, e in zip(
+                matvec_mul(self.W_g, x), # ضرب وزن ها وروی مقدار جدید حافظه در ورودی
+                matvec_mul(self.U_g, self.h), # ضرب ماتریس وزن حالت مخفی قبلی cell canditate در حالت مخفی فعلی
+                self.b_g # بایاس های cell canditate
         )]
         # new cell state
+        # حالت جدید سلول ترکیبی از حالت قبلی و اطلاعات جدید است
+        # فاکتور فراموشی قسمت قبلی را نگه می دارد, و دروازه ورودی و پیشنهاد مقدار جدید را وارد می کنند.
         self.c = [f_t * c_prev + i_t * g_t for f_t, c_prev, i_t, g_t in zip(f, self.c, i, g)]
         # output gate
+        # این دروازه مشخص می کند چه مقدار اطلاعات وضعیت سلولی به حالت مخفی در خروجی داده شود.
+        # در اینجا تاثیر وضعیت سلولی در خروجی در نظر گرفته شده است.
         o = [sigmoid(a + b + c_t * v + e) for a, b, c_t, v, e in zip(
             matvec_mul(self.W_o, x),
             matvec_mul(self.U_o, self.h),
@@ -99,5 +132,5 @@ class LSTMCell:
             self.b_o
         )]
         # new hidden state
-        self.h = [o_t * tanh(c_t) for o_t, c_t in zip(o, self.c)]
-        return self.h
+        self.h = [o_t * tanh(c_t) for o_t, c_t in zip(o, self.c)] # آپدیت کردن حالت مخفی فعلی با ضرب هر مقدار دروازه ورودی در تانژانت هایپربولیک هر عضو حالت سلولی
+        return self.h # برگرداندن حالت مخفی فعلی 
