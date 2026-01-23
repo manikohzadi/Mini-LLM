@@ -2,11 +2,12 @@ import math # اضافه کردن کتابخانه math برای نوشتن acti
 import random # اضافه کردن این کتابخانه برای ساخت وزن ها و بایاس ها ماتریس ها
 from typing import List, Tuple # اضافه کردن این کتابخانه برای type annotations توابع
 
-def sigmoid(x: float) -> float: # تابع فعال سازی sigmoid
+def sigmoid(x: float) -> float: # تابع فعال سازی sigmoid که ورودی را بین 0 و 1 نگه می دارد
+    # در LSTM برای دروازه ها استفاده می شود تا مشخص شود چه مقدار اطلاعات عبور کند یعنی 0 به معنای اصلا عبور نکند است و 1 به معنای قطعا عبور کند است       
     """sigmoid activation function for Neural Networks and LSTM RNN"""
     return 1 / (1 + math.exp(-x)) # توضیحات در عکس function_formulas.png
 
-def tanh(x: float) -> float: # activation function تانژانت هایپربولیک
+def tanh(x: float) -> float: # activation function تانژانت هایپربولیک که ورودی را بین -1 و 1 نگه می دارد
     """hyperbolic tangent activation function for Neural Networks and LSTM RNN"""
     return math.tanh(x) # توضیحات در عکس function_formulas.png
 
@@ -16,7 +17,9 @@ def zeros(shape: Tuple[int, ...]) -> List[List[float]]:
         return [0.0 for _ in range(shape[0])] # ساخت لیستی از صفر ها به طول اولین عضو تاپل shape با استفاده از List Comprehension
     elif len(shape) == 2: # بررسی کردن اینکه shape دو بعدی باشد
         return [[0.0 for _ in range(shape[1])] for _ in range(shape[0])] # لیستی از لیست صفر ها به طول (shape[0], shape[1])
-    else: # اگر کاربر shapeی وارد کرده بود که طولش بیشتر از 2 بود مثلا 3 بعدی یا 4 بعدی وارد کرده بود
+    elif len(shape) == 3:
+        return [[[0.0 for _ in range(shape[2])] for _ in range(shape[1])] for _ in range(shape[0])] # لیستی از لیست صفر ها به طول (shape[0], shape[1])
+    else: # اگر کاربر shapeی وارد کرده بود که طولش بیشتر از 3 بود مثلا 4 بعدی یا 5 بعدی وارد کرده بود
         raise ValueError("Unsupported shape") # ارور می دهیم چون این تابع فقط آرایه و ماتریس می سازد نه تنسور
 
 def random_matrix(rows: int, cols: int, scale: float = 0.1) -> List[List[float]]: # این تابع برای ساخت وزن های اولیه است
@@ -70,16 +73,16 @@ class LSTMCell: # این کلاس نشان دهنده یک سلول LSTM است
         self.V_o = [random.random() * scale for _ in range(hidden_size)] # خروجی
 
         # biases
-        self.b_i = [0.0 for _ in range(hidden_size)] # ورودی
+        self.b_i = zeros((hidden_size)) # ورودی
         self.b_f = [1.0 for _ in range(hidden_size)] # فراموشی : forget bias = 1
         # نکته مهم در مورد بایاس های فراموشی :
         #   مقدار اولیه اش 1 است که به شبکه کمک می کند تا از ذخیره سازی اطلاعات جدید راحت تر استفاده کند
-        self.b_o = [0.0 for _ in range(hidden_size)] # خروجی
-        self.b_g = [0.0 for _ in range(hidden_size)] # cell canditate
+        self.b_o = zeros((hidden_size)) # خروجی
+        self.b_g = zeros((hidden_size)) # cell canditate
 
         # states یا حالت های اولیه
-        self.h = [0.0 for _ in range(hidden_size)] # حالت مخفی اولیه که از صفر شروع می کنیم
-        self.c = [0.0 for _ in range(hidden_size)] # حالت سلولی اولیه که از صفر شروع می کنیم دوباره
+        self.h = zeros((hidden_size)) # حالت مخفی اولیه که از صفر شروع می کنیم
+        self.c = zeros((hidden_size)) # حالت سلولی اولیه که از صفر شروع می کنیم دوباره
 
     def forward(self, x: List[float]) -> List[float]: # این متد برای پردازش یک توکن ورودی است
         """

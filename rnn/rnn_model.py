@@ -1,60 +1,74 @@
-from typing import List
-from rnn_cell import LSTMCell
-import random
+# rnn_model.py (Built-in only, LSTM industrial)
 import math
+import random
+from typing import List
+from rnn.rnn_cell import LSTMCell  # سلول حرفه‌ای LSTM که توضیح دادی
 
-
-class RNNLanguageModel:
-    def __init__(self, vocab_size: int, embedding_dim: int, hidden_size: int):
+class LSTMModel:
+    def init(self, vocab_size: int, embedding_dim: int = 256, hidden_dim: int = 512, dropout: float = 0.2):
         self.vocab_size = vocab_size
         self.embedding_dim = embedding_dim
-        self.hidden_size = hidden_size
+        self.hidden_dim = hidden_dim
+        self.dropout = dropout
 
-        # Embedding matrix
-        self.embeddings = [
-            [random.uniform(-0.1, 0.1) for _ in range(embedding_dim)]
-            for _ in range(vocab_size)
-        ]
+        # Embedding trainable
+        self.embedding = [[(random.random() - 0.5) * 0.02 for _ in range(embedding_dim)] for _ in range(vocab_size)]
 
-        # LSTM Cell
-        self.lstm = LSTMCell(embedding_dim, hidden_size)
+        # LSTM cell حرفه‌ای
+        self.lstm_cell = LSTMCell(embedding_dim, hidden_dim)
 
-        # Output projection
-        self.W_out = [[random.uniform(-0.1, 0.1) for _ in range(hidden_size)]
-                      for _ in range(vocab_size)]
+        # Fully connected layer برای تولید logits
+        self.W_out = [[(random.random() - 0.5) * 0.02 for _ in range(vocab_size)] for _ in range(hidden_dim)]
         self.b_out = [0.0 for _ in range(vocab_size)]
 
-    def embed(self, token_id: int) -> List[float]:
-        return self.embeddings[token_id]
+    def forward(self, input_ids: List[int]):
+        """یک پاس جلو با تمام توکن‌ها"""
+        outputs = []
 
-    def softmax(self, logits: List[float]) -> List[float]:
+        for t in input_ids:
+            x_t = self.embedding[t]
+            h_t = self.lstm_cell.forward(x_t)  # فقط ورودی x را می‌دهیم
+
+            # Dropout در hidden state
+            if self.dropout > 0:
+                mask = [1.0 if random.random() >= self.dropout else 0.0 for _ in h_t]
+                h_t = [hi * m / (1.0 - self.dropout) for hi, m in zip(h_t, mask)]
+
+            # Fully connected -> logits
+            logits = [sum(h_t[i] * self.W_out[i][j] for i in range(self.hidden_dim)) + self.b_out[j] for j in range(self.vocab_size)]
+            probs = self.softmax(logits)
+            outputs.append(probs)
+
+        return outputs
+
+    @staticmethod
+    def softmax(logits: List[float]) -> List[float]:
+        """Softmax ایمن از overflow"""
         max_logit = max(logits)
-        exp_vals = [math.exp(x - max_logit) for x in logits]
-        s = sum(exp_vals)
-        return [v / s for v in exp_vals]
+        exps = [math.exp(l - max_logit) for l in logits]
+        total = sum(exps)
+        return [e / total for e in exps]
 
-    def forward_step(self, token_id: int) -> List[float]:
-        """یک گام زمانی"""
-        x = self.embed(token_id)
-        h = self.lstm.forward(x)
-        logits = [
-            sum(w * h_i for w, h_i in zip(w_row, h)) + b
-            for w_row, b in zip(self.W_out, self.b_out)
-        ]
-        return logits
+    def generate(self, start_ids: List[int], max_length: int = 50, temperature: float = 1.0, top_k: int = 40):
+        """تولید متن با LSTM"""
+        output_ids = start_ids[:]
 
-    def predict_next(self, token_id: int, temperature: float = 1.0) -> int:
-        logits = self.forward_step(token_id)
+        for _ in range(max_length):
+            probs_seq = self.forward([output_ids[-1]])
+            probs = probs_seq[-1]
 
-        # temperature
-        scaled = [x / temperature for x in logits]
-        probs = self.softmax(scaled)
+            # Temperature
+            adjusted_probs = [p ** (1.0 / temperature) for p in probs]
+            s = sum(adjusted_probs)
+            adjusted_probs = [p / s for p in adjusted_probs]
 
-        r = random.random()
-        cumulative = 0.0
-        for i, p in enumerate(probs):
-            cumulative += p
-            if r <= cumulative:
-                return i
+            # Top-k
+            top_indices = sorted(range(len(adjusted_probs)), key=lambda i: adjusted_probs[i], reverse=True)[:top_k]
+            top_probs = [adjusted_probs[i] for i in top_indices]
+            s = sum(top_probs)
+            top_probs = [p / s for p in top_probs]
 
-        return len(probs) - 1
+            next_token = random.choices(top_indices, weights=top_probs)[0]
+            output_ids.append(next_token)
+
+        return output_ids
