@@ -15,7 +15,7 @@ SPECIAL_TOKENS = ["<PAD>", "<UNK>", "<BOS>", "<EOS>"] # توضیح هر توکن
 # <BOS> hello world mani <PAD> <PAD> <EOS>
 
 
-def build_vocab(all_tokens: List[List[str]], max_vocab_size: int = 100000) -> Dict[str, Dict]:
+def build_vocab(all_tokens: List[List[str]], max_vocab_size: int = 100_000) -> Dict[str, Dict]:
     """این تابع یک واژگان از لیستی از لیست توکن ها می سازد و هم خود واژگان را در قالب دیکشنری خروجی می دهد هم آن را در قالب فایل JSON ذخیره می کند"""
 
     flat_tokens = [tok for doc in all_tokens for tok in doc] # تمام توکن ها را فقط به یک لیست صاف تبدیل می کنهد
