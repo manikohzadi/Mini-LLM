@@ -16,19 +16,37 @@ def zeros(shape: Tuple[int, ...]) -> List[List[float]]:
     if len(shape) == 1: # بررسی کردن اینکه shape تک بعدی باشد
         return [0.0 for _ in range(shape[0])] # ساخت لیستی از صفر ها به طول اولین عضو تاپل shape با استفاده از List Comprehension
     elif len(shape) == 2: # بررسی کردن اینکه shape دو بعدی باشد
-        return [[0.0 for _ in range(shape[1])] for _ in range(shape[0])] # لیستی از لیست صفر ها به طول (shape[0], shape[1])
+        return [[0.0 for _ in range(shape[1])] for _ in range(shape[0])] # لیستی از لیست صفر ها به ابعاد (shape[0], shape[1])
     elif len(shape) == 3:
-        return [[[0.0 for _ in range(shape[2])] for _ in range(shape[1])] for _ in range(shape[0])] # لیستی از لیست صفر ها به طول (shape[0], shape[1])
+        return [[[0.0 for _ in range(shape[2])] for _ in range(shape[1])] for _ in range(shape[0])] # لیستی از لیستی از لیست صفر ها به ابعاد (shape[0], shape[1], shape[2])
     else: # اگر کاربر shapeی وارد کرده بود که طولش بیشتر از 3 بود مثلا 4 بعدی یا 5 بعدی وارد کرده بود
-        raise ValueError("Unsupported shape") # ارور می دهیم چون این تابع فقط آرایه و ماتریس می سازد نه تنسور
+        raise ValueError("Unsupported shape") # ارور می دهیم چون این تابع فقط بردار و ماتریس و تنسور می سازد
+    
+def random_vector(length: int, scale: float = 0.1) -> List[float]:
+    """این تابع یک بردار تصادفی با طول و مقیاس دلخواه می سازد که داده هایی که تولید می کند بین -scale و scale است"""
+    return [(random.random() * 2 - 1) * scale for _ in range(length)] # هر سلول = می تونه یک عدد منفی یا مثبت باشه. نکته : هر چقدر عدد تصادفی تولید شده بزرگ تر باشه جواب مثبت در می آید و هر چقدر عدد تصادفی تولید شده کوچکتر باشه جواب منفی در می آید و اگر عدد تصادفی تولید شده 0.5 باشه اون وقت میشه 0
+
 
 def random_matrix(rows: int, cols: int, scale: float = 0.1) -> List[List[float]]: # این تابع برای ساخت وزن های اولیه است
-    """این تابع یک ماتریس تصادفی با سطر و ستون مقیاس دلخواه می سازد"""
+    """این تابع یک ماتریس تصادفی با سطر و ستون مقیاس دلخواه می سازد که داده هایی که تولید می کند بین -scale و scale است"""
     return [[(random.random() * 2 - 1) * scale # هر سلول = می تونه یک عدد منفی یا مثبت باشه. نکته : هر چقدر عدد تصادفی تولید شده بزرگ تر باشه جواب مثبت در می آید و هر چقدر عدد تصادفی تولید شده کوچکتر باشه جواب منفی در می آید و اگر عدد تصادفی تولید شده 0.5 باشه اون وقت میشه 0
                 for _ in range(cols)] # حلقه زدن روی تعداد ستون ها
                 for _ in range(rows) # حلقه زدن روی تعداد سطر ها
         ]
     # اگر scale را مقداری خیلی بزرگ یا خیلی کوچک  بذاریم اونوقت داده هامون خیلی بزرگ یا خیلی کوچک میشن
+
+def full(shape: Tuple[int, ...], fill_value: int) -> List[List[float]]:
+    """این تابع یک آرایه پر شده با مقدار دلخواه بر می گرداند با شکل دلخواه"""
+    fill_value = float(fill_value)
+
+    if len(shape) == 1: # بررسی کردن اینکه shape تک بعدی باشد
+        return [fill_value for _ in range(shape[0])] # ساخت لیستی از fill_value ها به طول اولین عضو تاپل shape با استفاده از List Comprehension
+    elif len(shape) == 2: # بررسی کردن اینکه shape دو بعدی باشد
+        return [[fill_value for _ in range(shape[1])] for _ in range(shape[0])] # لیستی از لیست fill_value ها به ابعاد (shape[0], shape[1])
+    elif len(shape) == 3:
+        return [[[fill_value for _ in range(shape[2])] for _ in range(shape[1])] for _ in range(shape[0])] # لیستی از لیستی از لیست fill_value ها به ابعاد (shape[0], shape[1], shape[2])
+    else: # اگر کاربر shapeی وارد کرده بود که طولش بیشتر از 3 بود مثلا 4 بعدی یا 5 بعدی وارد کرده بود
+        raise ValueError("Unsupported shape") # ارور می دهیم چون این تابع فقط بردار و ماتریس و تنسور می سازد
 
 def matvec_mul(mat: List[List[float]], vec: List[float]) -> List[float]: # این تابع یک ماتریس و بردار را طبق قانون ریاضی اش ضرب می کند
     if len(mat[0]) != len(vec): # بررسی کردن اینکه طول ها با هم برابر نباشند
@@ -68,13 +86,13 @@ class LSTMCell: # این کلاس نشان دهنده یک سلول LSTM است
 
         # peephole connections یا دروازه های چشم درشت یا ارتباط های پیه پول
         # توضیحات : این ها وزن هایی هستند که به peephole connections معروف اند  که مستقیم به حالت سلولی وصل می شوند تا در تصمیم گیری دروازه ها کمک کنند
-        self.V_i = [random.random() * scale for _ in range(hidden_size)] # ورودی
-        self.V_f = [random.random() * scale for _ in range(hidden_size)] # فراموشی
-        self.V_o = [random.random() * scale for _ in range(hidden_size)] # خروجی
+        self.V_i = random_vector(hidden_size, scale) # ورودی
+        self.V_f = random_vector(hidden_size, scale) # فراموشی
+        self.V_o = random_vector(hidden_size, scale) # خروجی
 
         # biases
         self.b_i = zeros((hidden_size)) # ورودی
-        self.b_f = [1.0 for _ in range(hidden_size)] # فراموشی : forget bias = 1
+        self.b_f = full((hidden_size), 1.0) # فراموشی : forget bias = 1
         # نکته مهم در مورد بایاس های فراموشی :
         #   مقدار اولیه اش 1 است که به شبکه کمک می کند تا از ذخیره سازی اطلاعات جدید راحت تر استفاده کند
         self.b_o = zeros((hidden_size)) # خروجی
@@ -95,11 +113,12 @@ class LSTMCell: # این کلاس نشان دهنده یک سلول LSTM است
         :rtype: List[float]
         """
         # input gate
+        # این دروازه می گه که چقدر اطلاعات جدید وارد شود
         i = [sigmoid(a + b + c * d + e) # تابع فعال سازی برای تنظیم مقدار دروازه بین 0 و 1
             for a, b, c, d, e in zip(
                 matvec_mul(self.W_i, x), # ضرب ماتریس وزن ورودی در ورودی
                 matvec_mul(self.U_i, self.h), # وزن های مربوط به حالت مخفی قبلی  و تاثیر آن بر دروازه ورودی را محاسبه می کند.
-                self.V_i, # این مقادیر نرون های یادآور هستند یعنی حالت سلول قبلی را مستقیما وارد دروازه می کنند تا در تصمیم گیری اثرگذار باشد.
+                self.V_i, # این مقادیر نرون های یادآور هستند یعنی حالت سلول قبلی را مستقیما وارد دروازه می کنند تا در تصمیم گیری اثرگذار باشد. به زبان ساده می گویند چقدر از حافظه بلند مدت(c) در تصمیم گیری دخیل باشد
                 self.c, # حالت سلول قبلی که اطلاعات بلندمدت را نگه می دارد
                 self.b_i # بایاس یا دگرگونی پایه که کمک می کند که مدل بهتر و سریعتر آموزش ببینه
         )]
@@ -117,7 +136,7 @@ class LSTMCell: # این کلاس نشان دهنده یک سلول LSTM است
         g = [tanh(a + b + e) # tanh تابع فعال سازی است که مقدارش بین -1 و 1 است.
                 for a, b, e in zip(
                 matvec_mul(self.W_g, x), # ضرب وزن ها وروی مقدار جدید حافظه در ورودی
-                matvec_mul(self.U_g, self.h), # ضرب ماتریس وزن حالت مخفی قبلی cell canditate در حالت مخفی فعلی
+                matvec_mul(self.U_g, self.h), # ضرب وزن recurrent در hidden state قبلی برای محاسبه contribution به gate یا canditate
                 self.b_g # بایاس های cell canditate
         )]
         # new cell state
@@ -142,3 +161,8 @@ class LSTMCell: # این کلاس نشان دهنده یک سلول LSTM است
 # توضیحات تکمیلی :
 #       می توانیم بگیم که self.c همان حافظه بلند مدت است
 #       می توانیم بگیم که self.h همان حافظه کوتاه مدت است
+#       فرق g و i به زبان ساده این است g می گوید چه چیزی وارد شود و i می گوید چقدرش وارد شود
+#       o تصمیم می گیرد چقدر از حافظه خروجی داده شود و دیده شود ولی اکر نباشد همیشه همه ی حافظه همیشه لو می رود و این باعث over-sharing و کاهش قدرت مدل می شه
+#       over-sharing یعنی اینکه شبکه بیش از حد لازم اطلاعات داخلی اش را به خروجی می ریزد و تمام c ها می ره داخل h و این به دلیل o ضعیف است
+#       over-sharing وقتی اتفاق بیفته مدل هر چی یاد گرفته میگه و نمی دونه کی باید سکوت کنه و نتیجه اش میشه حرف های بی ربط و لو رفتن اطلاعات قدیمی و ناتوانی در تمرکز روی موضوع اصلی
+#       ز حافظه بلند مدته که خصوصی است ولی h چیزی است که بیرون داده می شود
