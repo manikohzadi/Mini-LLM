@@ -141,29 +141,15 @@ def normalize_repeated_chars(text: str) -> str:
     return re.sub(r"(.)\1{2,}", r"\1", text)
 
 def normalize_persian_unicode(text: str) -> str:
-    """یکسان سازی حروف فارسی و اعداد"""
-    # حروف
-    text = text.replace('ي', 'ی')
-    text = text.replace('ئ', 'ی')
-    text = text.replace('ؤ', 'و')
-    text = text.replace('ك', 'ک')
-    text = text.replace('ۀ', 'ه')
-    text = text.replace('ة', 'ت')
-    text = text.replace('ۃ', 'ت')
+    text = text.replace("\u0640", "") # حذف tatweel که برای کشیدن حروف استفاده میشه
+    text = text.replace("\u200c", "") # حذف ZWNJ یا همون نیم فاصله
+    text = text.replace("ئ", "ی")
+    text = text.replace("ك", "ک")
+    text = text.replace("ي", 'ی')
+    text = text.replace("ة", 'ت')
+    text = text.replace("ۃ", 'ت')
 
-    # اعداد فارسی به انگلیسی
-    persian_numbers = '۰۱۲۳۴۵۶۷۸۹'
-    english_numbers = '0123456789'
-    for p, e in zip(persian_numbers, english_numbers):
-        text = text.replace(p, e)
-
-    # حذف نویسه‌های zero-width-non-joiner
-    text = re.sub(r'\u200c', '<ZWNJ>', text)
-    # حذف نویسه‌های zero-width-joiner
-    text = re.sub(r'\u200d', '<ZWJ>', text)
-    # حذف کشیده یا Tatweel
-    text = re.sub(r"\u0640", '', text)
-    return text
+    return text # برگرداندن متن
 
 def clean_text(text: str) -> str:
     """متن را پاکسازی می‌کند"""
