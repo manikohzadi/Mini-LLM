@@ -2,6 +2,44 @@ import math # اضافه کردن کتابخانه math برای نوشتن acti
 import random # اضافه کردن این کتابخانه برای ساخت وزن ها و بایاس ها ماتریس ها
 from typing import List, Tuple # اضافه کردن این کتابخانه برای type annotations توابع
 
+
+Matrix = List[List[float]]
+
+def random_gaussian_matrix(rows: int, cols: int) -> Matrix:
+    return [[random.gauss(0.0, 1.0) for _ in range(cols)] for _ in range(rows)]
+
+def orthogonal_matrix(rows: int, cols: int) -> Matrix:
+    """
+    Returns a matrix Q of shape (rows, cols) where columns are orthonormal:
+        Q^T Q = I
+    Suitable for LSTM / RNN U matrices.
+    """
+
+    A = random_gaussian_matrix(rows, cols)
+    Q = [[0.0] * cols for _ in range(rows)]
+
+    for k in range(cols):
+        # بردار ستون k از A
+        v = [A[i][k] for i in range(rows)]
+
+        # حذف مؤلفه‌های قبلی (Modified Gram-Schmidt بسیار پایدار)
+        for j in range(k):
+            dot = sum(Q[i][j] * v[i] for i in range(rows))
+            for i in range(rows):
+                v[i] -= dot * Q[i][j]
+
+        # نرمال‌سازی
+        norm = math.sqrt(sum(x * x for x in v))
+        if norm == 0:
+            # fallback نادر
+            v = [random.gauss(0, 1) for _ in range(rows)]
+            norm = math.sqrt(sum(x * x for x in v))
+
+        for i in range(rows):
+            Q[i][k] = v[i] / norm
+
+    return Q
+
 def sigmoid(x: float) -> float: # تابع فعال سازی sigmoid که ورودی را بین 0 و 1 نگه می دارد
     # در LSTM برای دروازه ها استفاده می شود تا مشخص شود چه مقدار اطلاعات عبور کند یعنی 0 به معنای اصلا عبور نکند است و 1 به معنای قطعا عبور کند است       
     """sigmoid activation function for Neural Networks and LSTM RNN"""
@@ -85,11 +123,12 @@ class LSTMCell: # این کلاس نشان دهنده یک سلول LSTM است
         self.hidden_size = hidden_size # تعداد نورون های مخفی در سلول یعنی ابعاد حالت مخغی
 
         # مقدار دهی اولیه وزن ها و پارامتر ها
-        scale = math.sqrt(2 / (input_size + hidden_size)) # این متغیر مقدار نرمال برای وزن ها است که بر اساس اندازه ورودی محاسبه میشود و برای بهبود آموزش است که کمک می کند وزن ها در بازه مناسب قرار گیرند
+        scale = math.sqrt(2 / (input_size + hidden_size)) # این متغیر مقدار نرمال برای وزن ها است که بر اساس اندازه ورودی محاسبه میشود و برای بهبود آموزش است که کمک می کند وزن ها در بازه مناسب قرار گیرند و این فرمول به Xavier معروف است
         
         self.W = random_matrix(4 * hidden_size, input_size, scale)
-        self.U = random_matrix(4 * hidden_size, hidden_size, scale)
-        self.b = zeros((4 * hidden_size)) # 🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴
+        self.U = orthogonal_matrix(4 * hidden_size, hidden_size)
+        self.b = zeros((4 * hidden_size))
+        self.b[self.hidden_size:2*self.hidden_size] = full((hidden_size), 1)
 
         # peephole connections یا دروازه های چشم درشت یا ارتباط های پیه پول
         # توضیحات : این ها وزن هایی هستند که به peephole connections معروف اند  که مستقیم به حالت سلولی وصل می شوند تا در تصمیم گیری دروازه ها کمک کنند
@@ -124,10 +163,10 @@ class LSTMCell: # این کلاس نشان دهنده یک سلول LSTM است
 
         H = self.hidden_size # طول حالت مخفی
 
-        z_i = z[0:H] # 🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴
-        z_f = z[H:2*H] # 🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴
-        z_o = z[2*H:3*H] # 🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴
-        z_g = z[3*H:4*H] # 🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴
+        z_i = layer_norm(z[0:H])
+        z_f = layer_norm(z[H:2*H])
+        z_o = layer_norm(z[2*H:3*H])
+        z_g = layer_norm(z[3*H:4*H])
 
         # input gate
         # این دروازه می گه که چقدر اطلاعات جدید وارد شود
@@ -156,7 +195,7 @@ class LSTMCell: # این کلاس نشان دهنده یک سلول LSTM است
         # new cell state
         # حالت جدید سلول ترکیبی از حالت قبلی و اطلاعات جدید است
         # فاکتور فراموشی قسمت قبلی را نگه می دارد, و دروازه ورودی و پیشنهاد مقدار جدید را وارد می کنند.
-        c = [f[j] * c_prev[j] + i[j] * g[j] for j in range(H)]
+        c = layer_norm([f[j] * c_prev[j] + i[j] * g[j] for j in range(H)])
 
         # output gate
         # این دروازه مشخص می کند چه مقدار اطلاعات وضعیت سلولی به حالت مخفی در خروجی داده شود.
@@ -164,7 +203,7 @@ class LSTMCell: # این کلاس نشان دهنده یک سلول LSTM است
         o = [sigmoid(z_o[j] + self.V_o[j] * c[j]) for j in range(H)]
 
         # new hidden state
-        h = [o[j] * tanh(c[j]) for j in range(H)] # آپدیت کردن حالت مخفی فعلی با ضرب هر مقدار دروازه ورودی در تانژانت هایپربولیک هر عضو حالت سلولی
+        h = [o[j] * tanh(layer_norm(c)[j]) for j in range(H)] # آپدیت کردن حالت مخفی فعلی با ضرب هر مقدار دروازه ورودی در تانژانت هایپربولیک هر عضو حالت سلولی
         return h, c # برگرداندن حالت مخفی و سلولی فعلی
 
 
