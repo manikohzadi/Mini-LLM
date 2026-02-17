@@ -55,7 +55,6 @@ def matmul(A: Matrix, B: Matrix) -> Matrix: # این تابع دو ماتریس 
     :return: ماتریس اول × ماتریس دوم
     :rtype: Matrix
     """
-
     rows, cols, inner = len(A), len(B[0]), len(B) # تعداد سطر ماتریس اول, تعداد ستون ماتریس دوم, تعداد سطر ماتریس دوم
     return [
         [sum(A[i][k] * B[k][j] for k in range(inner)) for j in range(cols)]
@@ -66,6 +65,7 @@ def matmul(A: Matrix, B: Matrix) -> Matrix: # این تابع دو ماتریس 
     #       درایه های سطر اول A را به ترتیب در تمام درایه های ستون دوم B .ضرب می کنیم و درایه های حاصل را به ترتیب جمع می کنیم و آن را در ستون اول سطر اول ماتریس حاصل می نویسیم
     #       الان کار بالا را برای ستون های بعدی ماتریس B انجام می دهیم و دوباره آن را در ستون های بعدی سطر اول ماتریس حاصل می نویسیم.
     #       وقتی کار بالا را تمام کردیم می رویم سراغ سطر های بعدی ماتریس A و کار های قبلی را برایش تکرار می کنیم و این بار حاصل ها را در سطر های بعدی ماتریس حاصل می نویسیم.
+
 
 def householder_qr(A: Matrix) -> Matrix:
     """
@@ -83,14 +83,11 @@ def householder_qr(A: Matrix) -> Matrix:
 
     # حلقه ی اصلی روی ستون ها
     for k in range(min(n, m)): # برای هر ستون k از 0 تا min(n, m) - 1 می خواهیم بازتاب householder بسازیم تا ستون k را از ردیف k به پایین صفر کنیم.
-        # بردار ستون زیر قطر
         x = [R[i][k] for i in range(k, n)] # x برداری از ستون k از ردیف k به پایین می‌گیرد
         # این همون برداریه که می خواهیم با اون بازتاب رو صاف کنیم یعنی اینکه فقط اولین عضو غیر صفر باقی بماند و بقیه صفر شوند
-
-        # نرم بردار x
-        norm_x = math.sqrt(sum(v * v for v in x)) # محاسبه نرم 2 (L2 Normalization) بردار x
-        if norm_x == 0: # اگر نرم صفر باشد یعنی همه مقادیر صفر هستند
-            continue # پس نیاز به تغییر نداریم و حلقه ادامه می یابد
+        norm_x = math.sqrt(sum(v * v for v in x))
+        if norm_x == 0:
+            continue
 
         sign = -1.0 if x[0] < 0 else 1.0
         u1 = x[0] + sign * norm_x
@@ -122,8 +119,12 @@ def orthogonal_matrix(rows: int, cols: int) -> Matrix:
     return [row[:cols] for row in Q_full]
 
 
+def check_orthogonality(Q: Matrix) -> Matrix:
+    Qt = transpose(Q)
+    return matmul(Qt, Q)
+
+
 def sigmoid(x: float) -> float: # تابع فعال سازی sigmoid که ورودی را بین 0 و 1 نگه می دارد
-    # در LSTM برای دروازه ها استفاده می شود تا مشخص شود چه مقدار اطلاعات عبور کند یعنی 0 به معنای اصلا عبور نکند است و 1 به معنای قطعا عبور کند است       
     """sigmoid activation function for Neural Networks and LSTM RNN"""
     if x >= 0:
         z = math.exp(-x)
@@ -136,66 +137,34 @@ def tanh(x: float) -> float: # activation function تانژانت هایپربو
     """hyperbolic tangent activation function for Neural Networks and LSTM RNN"""
     return math.tanh(x)
 
-def zeros(shape: Tuple[int, ...]) -> List[List[float]]:
-    """این تابع یک آرایه پر شده با صفر بر می گرداند با شکل دلخواه"""
+def zeros(shape: Tuple[int, ...]):
     if len(shape) == 1:
         return [0.0 for _ in range(shape[0])]
     elif len(shape) == 2:
         return [[0.0 for _ in range(shape[1])] for _ in range(shape[0])]
-    elif len(shape) == 3:
-        return [[[0.0 for _ in range(shape[2])] for _ in range(shape[1])] for _ in range(shape[0])]
     else:
         raise ValueError("Unsupported shape")
-    
-def random_vector(length: int, scale: float = 0.1) -> List[float]:
-    """این تابع یک بردار تصادفی با طول و مقیاس دلخواه می سازد که داده هایی که تولید می کند بین -scale و scale است"""
-    return [(random.random() * 2 - 1) * scale for _ in range(length)]
 
-def random_matrix(rows: int, cols: int, scale: float = 0.1) -> List[List[float]]:
-    """این تابع یک ماتریس تصادفی با سطر و ستون مقیاس دلخواه می سازد که داده هایی که تولید می کند بین -scale و scale است"""
-    return [[(random.random() * 2 - 1) * scale for _ in range(cols)] for _ in range(rows)]
-
-def full(shape: Tuple[int, ...], fill_value: int) -> List[List[float]]:
-    """این تابع یک آرایه پر شده با مقدار دلخواه بر می گرداند با شکل دلخواه"""
-    fill_value = float(fill_value)
-
+def full(shape: Tuple[int, ...], fill_value: float):
     if len(shape) == 1:
         return [fill_value for _ in range(shape[0])]
     elif len(shape) == 2:
         return [[fill_value for _ in range(shape[1])] for _ in range(shape[0])]
-    elif len(shape) == 3:
-        return [[[fill_value for _ in range(shape[2])] for _ in range(shape[1])] for _ in range(shape[0])]
     else:
         raise ValueError("Unsupported shape")
 
-def matvec_mul(mat: List[List[float]], vec: List[float]) -> List[float]:
-    if len(mat[0]) != len(vec):
-        raise ValueError("باید تعداد ستون های بردار و ماتریس برابر باشد.")
-    result = []
-    for row in mat:
-        s = 0.0
-        for a, b in zip(row, vec):
-            s += a * b
-        result.append(s)
-    return result
+def add_bias(matrix: Matrix, bias: List[float]) -> Matrix:
+    return [[val + bias[j] for j, val in enumerate(row)] for row in matrix]
 
-def vecs_add(*vecs):
-    if not vecs:
-        raise ValueError("برای انجام این عملیات حداقل یک بردار لازم است.")
-    n = len(vecs[0])
-    for v in vecs:
-        if len(v) != n:
-            raise ValueError("باید تمام بردار ها طول یکسانی داشته باشند")
-    return [sum(values) for values in zip(*vecs)]
+def layer_norm_matrix(mat: Matrix, eps: float = 1e-5):
+    output = []
+    for vec in mat:
+        mean = sum(vec) / len(vec)
+        var = sum((x - mean) ** 2 for x in vec) / len(vec)
+        inv_std = 1.0 / math.sqrt(var + eps)
+        output.append([(x - mean) * inv_std for x in vec])
+    return output
 
-def layer_norm(vec: List[float], eps: float = 1e-5, gamma: List[float] = None, beta: List[float] = None) -> List[float]:
-    mean = sum(vec) / len(vec)
-    var = sum((x - mean) ** 2 for x in vec) / len(vec)
-    inv_std = 1.0 / math.sqrt(var + eps)
-    out = [(x - mean) * inv_std for x in vec]
-    if gamma is not None and beta is not None:
-        out = [g * o + b for o, g, b in zip(out, gamma, beta)]
-    return out
 
 class LSTMCell:
     def __init__(self, input_size: int, hidden_size: int):
@@ -204,39 +173,40 @@ class LSTMCell:
 
         scale = math.sqrt(1.0 / input_size)
         
-        self.W = random_matrix(4 * hidden_size, input_size, scale)
+        self.W = random_gaussian_matrix(4 * hidden_size, input_size)
         self.U = orthogonal_matrix(4 * hidden_size, hidden_size)
-        self.b = zeros((4 * hidden_size))
-        self.b[self.hidden_size:2*self.hidden_size] = full((hidden_size), 1)
+        self.b = zeros((4 * hidden_size,))
+        self.b[self.hidden_size:2*self.hidden_size] = full((hidden_size,), 1.0)
 
-        self.gamma = full((4 * hidden_size,), 1.0)
-        self.beta = zeros((4 * hidden_size,))
+    def forward(self, x: Matrix, h_prev: Matrix, c_prev: Matrix):
+        Wx = matmul(x, transpose(self.W))
+        Uh = matmul(h_prev, transpose(self.U))
 
-        self.V_i = random_vector(hidden_size, scale)
-        self.V_f = random_vector(hidden_size, scale)
-        self.V_o = random_vector(hidden_size, scale)
-
-    def forward(self, x: List[float], h_prev: List[float], c_prev: List[float]) -> Tuple[List[float], List[float]]:
-        Wx = matvec_mul(self.W, x)
-        Uh = matvec_mul(self.U, h_prev)
-
-        z = vecs_add(Wx, Uh, self.b)
-        z = layer_norm(z, gamma=self.gamma, beta=self.beta)
+        z = add_bias([[a + b for a, b in zip(row1, row2)] for row1, row2 in zip(Wx, Uh)], self.b)
+        z = layer_norm_matrix(z)
 
         H = self.hidden_size
+        batch_size = len(z)
 
-        z_i = z[0:H]
-        z_f = z[H:2*H]
-        z_g = z[2*H:3*H]
-        z_o = z[3*H:4*H]
+        h_out = []
+        c_out = []
 
-        i = [sigmoid(z_i[j] + self.V_i[j] * c_prev[j]) for j in range(H)]
-        f = [sigmoid(z_f[j] + self.V_f[j] * c_prev[j]) for j in range(H)]
-        g = [tanh(z_g[j]) for j in range(H)]
+        for b_idx in range(batch_size):
+            row = z[b_idx]
+            z_i = row[0:H]
+            z_f = row[H:2*H]
+            z_g = row[2*H:3*H]
+            z_o = row[3*H:4*H]
 
-        c = [f[j] * c_prev[j] + i[j] * g[j] for j in range(H)]
+            i = [sigmoid(z_i[j]) for j in range(H)]
+            f = [sigmoid(z_f[j]) for j in range(H)]
+            g = [tanh(z_g[j]) for j in range(H)]
 
-        o = [sigmoid(z_o[j] + self.V_o[j] * c[j]) for j in range(H)]
-        h = [o[j] * tanh(c[j]) for j in range(H)]
+            c = [f[j] * c_prev[b_idx][j] + i[j] * g[j] for j in range(H)]
+            o = [sigmoid(z_o[j]) for j in range(H)]
+            h = [o[j] * tanh(c[j]) for j in range(H)]
 
-        return h, c
+            h_out.append(h)
+            c_out.append(c)
+
+        return h_out, c_out
