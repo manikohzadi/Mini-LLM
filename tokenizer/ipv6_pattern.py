@@ -53,13 +53,13 @@ _IPV6_INNER = rf"""
 """
 
 # الگوی کامل IPv6 به همراه براکت‌ها
-IPV6_LITERAL = re.compile(rf"""
+IPV6_LITERAL = rf"""
 (?P<ipv6>
     \[                           # کروشه باز
     (?:{_IPV6_INNER.strip()})    # 9 فرم مختلف
     {_ZONE_ID}                   # Zone ID اختیاری
     \]                           # کروشه بسته
 )
-""")
+"""
 
 # ⮡ کامنت هایی که در raw string بالا نوشتیم به عنوان regex تفسیر نمی شوند زیرا ما بعدا VERBOSE FLAG رو فعال می کنیم.
