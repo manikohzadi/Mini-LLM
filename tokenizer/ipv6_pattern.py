@@ -50,6 +50,9 @@ _IPV6_INNER = rf"""
     |
     # Form 9: [6 hex] + ::  (Trailing Double Colon (خالی))
     (?:{_HEX}:){{0,6}}{_HEX}::
+    |
+    # Form 10 : Unspecified
+    ::
 """
 
 # الگوی کامل IPv6 به همراه براکت‌ها
