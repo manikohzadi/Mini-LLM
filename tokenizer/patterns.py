@@ -3,6 +3,7 @@
 import re # برای ساخت الگو های ایمیل و URL
 from .constants import PERSIAN_LETTERS
 from .ipv6_pattern import IPV6_LITERAL
+from .tag_pattern import TAG_PATTERN
 
 # الگوی های اصلی
 
@@ -125,29 +126,6 @@ EMAIL_PATTERN = re.compile(
     re.IGNORECASE | re.VERBOSE
 )
 
-HTML_PATTERN = re.compile(
-    r"""
-    <
-    (?:/?[A-Za-z][A-Za-z0-9:-]*)
-    (?:\s+
-        (?:
-            [^\s<>=/]+
-            (?:\s*=\s*
-                (?:
-                    "[^"]*"
-                    |
-                    '[^']*'
-                    |
-                    [^\s"'=<>`]+
-                )
-            )?
-        )
-    )*
-    \s*/?>
-    """,
-    re.VERBOSE,
-)
-
 EMOJI_PATTERN = re.compile(
     "["
     "\U0001F600-\U0001F64F"
@@ -158,20 +136,30 @@ EMOJI_PATTERN = re.compile(
     "\U0001F900-\U0001F9FF"
     "\U00002600-\U000026FF"
     "\U00002B00-\U00002BFF"
-    "\U0001FA00-\U0001FA6F"   # اضافه شده
-    "\U0001FA70-\U0001FAFF"   # اضافه شده
+    "\U0001FA00-\U0001FA6F"
+    "\U0001FA70-\U0001FAFF"
     "]+",
     flags=re.UNICODE
 )
 
-# ---------- الگوهای فارسی‌سازی ----------
+# الگو های فارسی‌ سازی
 
-# پیشوندها: می، نمی، بی (با ZWNJ یا فاصله)
+# پیشوند ها: می, نمی, بی (با ZWNJ یا فاصله)
 PERSIAN_PREFIX_PATTERN = re.compile(
-    r"\b(نمی[\u200c\s]?|می[\u200c\s]?|بی[\u200c\s]?)"
+    r"""
+    \b # مرز کلمه که تعیین میکنه نمی, می یا بی خود کلمه باشه و انتهای کلمه دیگری نباشه
+    # یعنی باید قبل نمی, می یا بی مرز کلمه باشه
+    ( 
+        نمی[\u200c\s]? # نمی + فاصله یا نیم فاصله(اختیاری)
+        |
+        می[\u200c\s]?
+        |
+        بی[\u200c\s]? 
+    )""", 
+    re.VERBOSE
 )
 
-# پسوندها: ها، های، تر، ترین، جمع‌ها، ضمایر ملکی
+# پسوند ها: ها, های, تر, ترین, جمع‌ها, ضمایر ملکی
 PERSIAN_SUFFIX_PATTERN = re.compile(
     r"([\u200c]?(?:ها|های|هایی|تر|ترین|ای|گان|گانه"
     r"|م|ت|ش|مان|تان|شان|ام|ات|اش|ایم|اید|ایند))"
@@ -179,9 +167,17 @@ PERSIAN_SUFFIX_PATTERN = re.compile(
 
 # کاهش حروف تکراری - فقط روی حروف فارسی/لاتین
 REPEATED_CHAR_PATTERN = re.compile(
-    rf"([{PERSIAN_LETTERS}a-zA-Z])\1{{2,}}"
+    rf"([{PERSIAN_LETTERS}a-zA-Z])\1{{2,}}" # هر حرفی که سه بار پشت سرهم تکرار شده باشه رو match میکنه
+    # نکته : اگر \1 وجود نداشت هر کلمه ای که تعداد حروفش بیشتر یا مساوی 2 باشد match می شود
+    # معمولا در NLP دو حرف اشتباه محسوب نمی شود سه تا به بالا اغراق است
 )
 
+def normalize_repeated(match):
+    chars = match.group(0)
+    if chars[0].isascii():
+        return chars[:2]   # coooooool -> cool
+    return chars[:1]       # عااااالی -> عالی
+
 # الگوهای پاکسازی عمومی
-CONTROL_CHARS_PATTERN = re.compile(r"[\x00-\x1F\x7F\uFEFF]")
+CONTROL_CHARS_PATTERN = re.compile(r"[\x00-\x1F\x7F\uFEFF]") # تمام ASCII Control Characters + اون هایی که قابل چاپ نیستند یعنی DEL و Byte Order Mark یا همان BOM
 MULTI_WHITESPACE_PATTERN = re.compile(r"\s+")
