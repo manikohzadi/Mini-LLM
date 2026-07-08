@@ -37,7 +37,7 @@ class PersianNormalizer:
             raise TypeError(f"Expected str, got {type(text).__name__}") # آنگاه یک TypeError با متن مقابل به کاربر نشون بده
             # type(text) یک شی از نوع تایپ و یک property __name__ با مقدار اسم نوع text می باشد
 
-        if not text: # اگر متن خالی بود یا None بود
-            return text # آنگاه خود متن که یا خالی است و یا None است را برمی گرداند
+        if not text.strip(): # اگر متن خالی بود یا None بود
+            return "" # آنگاه خود متن که یا خالی است و یا None است را برمی گرداند
         
         return text.translate(_TRANSLATION_TABLE) # تبدیل کاراکتر و اعداد عربی به فارسی

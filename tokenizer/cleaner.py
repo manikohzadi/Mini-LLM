@@ -31,7 +31,7 @@ class TextCleaner:
         if not isinstance(text, str): # اگر متن از جنس رشته نباشد
             raise TypeError(f"Expected str, got {type(text).__name__}") # آنگاه یک TypeError با متن مقابل به کاربر نشون بده
             # type(text) یک شی از نوع تایپ و یک property __name__ با مقدار اسم نوع text می باشد
-        if not text: # اگر داخل متن خالی بود یا None بود
+        if not text.strip(): # اگر داخل متن خالی بود یا None بود
             return "" # آنگاه تو هم یک متن خالی به صورت مستقیم و بدون هیچ پردازشی بده
 
         # 1. حذف ساختار های خاص (ترتیب مهم است: HTML قبل از URL)
