@@ -172,12 +172,6 @@ REPEATED_CHAR_PATTERN = re.compile(
     # معمولا در NLP دو حرف اشتباه محسوب نمی شود سه تا به بالا اغراق است
 )
 
-def normalize_repeated(match):
-    chars = match.group(0)
-    if chars[0].isascii():
-        return chars[:2]   # coooooool -> cool
-    return chars[:1]       # عااااالی -> عالی
-
 # الگوهای پاکسازی عمومی
 CONTROL_CHARS_PATTERN = re.compile(r"[\x00-\x1F\x7F\uFEFF]") # تمام ASCII Control Characters + اون هایی که قابل چاپ نیستند یعنی DEL و Byte Order Mark یا همان BOM
 MULTI_WHITESPACE_PATTERN = re.compile(r"\s+")
