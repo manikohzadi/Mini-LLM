@@ -1,4 +1,4 @@
-"""تمام الگوهای regex به‌صورت pre-compiled"""
+"""تمام الگو های regex به‌ صورت pre-compiled"""
 
 import re # برای ساخت الگو های ایمیل و URL
 from .constants import PERSIAN_LETTERS
