@@ -7,13 +7,18 @@ from .constants import (
 ) # ثابت ها
 
 # ساخت جدول ترجمه یک‌ بار در زمان بارگذاری ماژول
-_TRANSLATION_TABLE: dict = str.maketrans(
+_TRANSLATION_TABLE = str.maketrans({
     # این تابع یک Translation Table می‌ سازد
     # Translation Table یعنی یک دیکشنری مخصوص که به str.translate() میگه:
     #   هر وقت فلان کاراکتر رو دیدی, اون رو با این کاراکتر جایگزین کن
-    "".join(ARABIC_TO_PERSIAN_MAP.keys()) + DIGITS_SOURCE,
-    "".join(ARABIC_TO_PERSIAN_MAP.values()) + DIGITS_TARGET,
-)
+    **ARABIC_TO_PERSIAN_MAP,
+    **dict(zip(DIGITS_SOURCE, DIGITS_TARGET)),
+    # zip() : دو تا Iterable رو کنار هم قرار میده
+    # dict() : حالا میاد و نتیجه zip که generator است رو تبدیل به دیکشنری میکنه که DIGITS_SOURCE کلید و DIGITS_TARGET مقدار است
+    # ** : این همان Dictionary Unpacking است یعنی میاد و محتوای دیکشنری رو به صورت Literal می نویسه
+    # حالا تو کد بالا محتوای دیکشنری ها کنار هم قرار میگیرن و یک دیکشنری کامل میسازند
+    # و حالا maketrans() میاد و یک Translation Table قابل استفاده برای translate() میسازه
+})
 # داخل Translation Table کلید ها کد یونیکد هستند، نه خود کاراکتر. و برای این کار هم از ord() استفاده می کنیم
 
 class PersianNormalizer:
