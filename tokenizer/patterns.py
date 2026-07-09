@@ -167,11 +167,16 @@ PERSIAN_SUFFIX_PATTERN = re.compile(
 
 # کاهش حروف تکراری - فقط روی حروف فارسی/لاتین
 REPEATED_CHAR_PATTERN = re.compile(
-    rf"([{PERSIAN_LETTERS}a-zA-Z])\1{{2,}}" # هر حرفی که سه بار پشت سرهم تکرار شده باشه رو match میکنه
-    # نکته : اگر \1 وجود نداشت هر کلمه ای که تعداد حروفش بیشتر یا مساوی 2 باشد match می شود
-    # معمولا در NLP دو حرف اشتباه محسوب نمی شود سه تا به بالا اغراق است
+    rf"""
+    (?:                                     # یکی از دو حالت زیر
+        ([a-zA-Z])\1{{2,}}                  # لاتین: 3 بار یا بیشتر
+        |
+        ([{PERSIAN_LETTERS}])\2{{1,}}       # فارسی: 2 بار یا بیشتر
+    )
+    """,
+    re.VERBOSE,
 )
 
-# الگوهای پاکسازی عمومی
+# الگو های پاکسازی عمومی
 CONTROL_CHARS_PATTERN = re.compile(r"[\x00-\x1F\x7F\uFEFF]") # تمام ASCII Control Characters + اون هایی که قابل چاپ نیستند یعنی DEL و Byte Order Mark یا همان BOM
 MULTI_WHITESPACE_PATTERN = re.compile(r"\s+")
