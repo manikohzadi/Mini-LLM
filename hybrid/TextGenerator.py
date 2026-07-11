@@ -11,6 +11,7 @@ class TextGenerator: # کلاس مخصوص تولید متن با استفاده
         self.lm = lm # شی مدل زبانی n-gram
         self.id_to_token = id_to_token # واژگانی که کلید آن id و مقدار آن token است
         self.token_to_id = token_to_id # برعکس واژگان بالا
+        # vocab builder مخصوص n-gram رو استفاده کنید 🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴
 
         self.BOS = token_to_id["<BOS>"] # id توکن ویژه BOS که نشان دهنده شروع جمله است
         self.EOS = token_to_id["<EOS>"] # id توکن ویژه EOS که نشان دهنده پایان جمله است
