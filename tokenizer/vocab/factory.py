@@ -6,11 +6,9 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from .builders.base import VocabularyBuilder
-from .builders.default_builder import DefaultVocabularyBuilder
+from .builders import VocabularyBuilder, DefaultVocabularyBuilder
 from .metadata import VocabularyMetadata
-from .repositories.base import VocabularyRepository
-from .repositories.json_repository import JSONVocabularyRepository
+from .repositories import VocabularyRepository, JSONVocabularyRepository
 from .types import Corpus
 from .vocabulary import Vocabulary
 
