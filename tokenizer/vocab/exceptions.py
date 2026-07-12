@@ -136,6 +136,27 @@ class LoadVocabularyError(RepositoryError):
     """
 
 
+class VocabularyFileNotFoundError(
+    LoadVocabularyError,
+    FileNotFoundError,
+):
+    """
+    Raised when a vocabulary file does not exist.
+    """
+
+    __slots__ = ("path",)
+
+    def __init__(self, path: object) -> None:
+        self.path = path
+        super().__init__(f"Vocabulary file not found: {path}")
+
+
+class InvalidVocabularyFormatError(LoadVocabularyError):
+    """
+    Raised when persisted vocabulary data has an invalid format.
+    """
+
+
 # ============================================================================
 # Serializer
 # ============================================================================
@@ -192,6 +213,8 @@ __all__ = (
     "RepositoryError",
     "SaveVocabularyError",
     "LoadVocabularyError",
+    "VocabularyFileNotFoundError",
+    "InvalidVocabularyFormatError",
     "SerializerError",
     "SerializationError",
     "DeserializationError",
