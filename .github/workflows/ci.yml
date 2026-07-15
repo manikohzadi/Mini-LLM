@@ -1,11 +1,93 @@
-name: Testing
-on: push
+name: Vocabulary CI # نام Workflow
 
-jobs:
-  test_tokenizer_and_vocab_builder:
+on: # بخش Trigger ها (زمان اجرای Workflow)
+  push: # اجرا هنگام push یعنی هر زمانی که کسی یک commit را به repository ارسال کند
+  pull_request: # یعنی وقتی یک Pull Request ساخته یا آپدیت شود, CI اجرا می‌ شود.
+  workflow_dispatch: # یعنی امکان اجرای دستی Workflow از پنل GitHub وجود دارد.
+
+permissions: # سطح دسترسی Workflow
+  contents: read # Workflow فقط اجازه خواندن فایل‌ های repository را دارد.
+
+jobs: # اینجا کار هایی که باید انجام شوند تعریف می شوند.
+      # این Workflow دو job دارد: tests و type-check و هر job مستقل انجام می شود
+  tests: # job اول
+    name: Tests (Python ${{ matrix.python-version }}) # نام نمایشی job که Dynamic است 
+    # یعنی وقتی matrix ساخته شود متن بالا با سه version مختلف نمایش داده می شود
+    runs-on: ubuntu-latest # یعنی این job روی یک ماشین مجازی Ubuntu اجرا می‌ شود.
+    timeout-minutes: 10 # اگر job بیشتر از 10 دقیقه طول بکشد: GitHub آن را متوقف می‌ کند.
+    # هدف : جلوگیری از گیر کردن CI
+    strategy: # تنظیمات اجرای چند باره job
+      fail-fast: false # اگر یکی از نسخه های Python شکست خورد, بقیه متوقف نشوند.
+      matrix: # یعنی: این کار را با چند حالت مختلف امتحان کن.
+        python-version: # یک متغیر به نامی که دارید می بینید
+          - "3.12"
+          - "3.13"
+          - "3.14"
+          # یعنی GitHub این job را سه بار اجرا می‌ کند
+
+    steps: # مراحل اجرای job
+        # 1. دریافت کد
+      - name: Check out repository
+        uses: actions/checkout@v6 # استفاده از Action آماده GitHub
+        # که کد repository را روی Runner دانلود می کند.
+
+        # 2. نصب Python
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v6 # یک Action رسمی برای نصب Python
+        with:
+          python-version: ${{ matrix.python-version }}
+        # یعنی پایتون را از matrix بگیر
+
+        # 3. Compile کردن کد
+      - name: Compile vocabulary package
+        run: python -m compileall -q tokenizer/vocab tests/vocab_tests
+        # این دستور:
+        # 1. python -m compileall: فایل های Python را به bytecode تبدیل می کند که یعنی یک فایل .py رو به .pyc, .pyo یا .pyd تبدیل می کند.
+        # 2. -q: به معنی quiet است یعنی در خروجی هیچ اطلاعات اضافی نمی دهد مگر اینکه به خطا بخورد.
+        # 3. هدف: پیدا کردن خطا های Syntax
+        # 4. tokenizer/vocab tests/vocab_tests: مسیر ها که شامل کد اصلی پروژه و کد تست ها است.
+        # 5. -m: اجرای یک ماژول که در CI ما ماژول داخلی compileall را اجرا می کند
+
+        # 4. اجرای تست ها
+      - name: Run vocabulary tests
+        run: python -m unittest discover -s tests -p "test_*.py" -v
+        # اجرای تست های پایتون:
+          # - unittest: ماژول تست داخلی Python
+          # - discover: یعنی خودت تست ها را پیدا کن
+          # - -s tests: محل تست ها یعنی از پوشه tests شروع کن
+          # - -p "test_*.py" : الگوی فایل تست که میاد و تمام فایل هایی که اولشان test_ و آخرشان .py باشد را match می کند
+          # - -v: verbose یعنی خروجی کامل تر
+
+  type-check: # job دوم برای بررسی Type Hint ها
+    name: Type check
     runs-on: ubuntu-latest
+    timeout-minutes: 10
+
     steps:
-    - uses: actions/checkout@v2
-    - name: Test tokenizer
-      run: |
-        python3 -m tests.test_tokenizer_and_vocab_builder.tokenizer_test
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+
+        # 1. نصب mypy
+        # mypy ابزاری برای بررسی Type Annotation است.
+        # علاوه بر این درستی import ها و ساختار ماژول‌ ها رو هم بررسی می کنه.
+      - name: Install mypy
+        run: python -m pip install --disable-pip-version-check mypy==1.14.1
+        # 1. python -m pip install: دقیقا مشخص می کند که از pip متعلق به کدام Python استفاده شود
+        # 2. --disable-pip-version-check: باعث می‌ شود pip چک نسخه انجام ندهد.
+        # 2.1. باعث می شود اگر نسخه pip قدیمی باشد دیگر pip پیام هشدار ندهد که باعث میشه خروجی شفاف و تمیز باشه
+        # 3. mypy==1.14.1 یعنی همیشه همین نسخه نصب شود
+
+        # 2. اجرای mypy
+      - name: Run mypy
+        run: >- # این یک دستور چند خطی YAML است یعنی تمام کد های زیر در نهایت به یک خط تبدیل می شوند
+          python -m mypy --explicit-package-bases
+          tokenizer/vocab
+          tests/vocab_tests
+        # --explicit-package-bases: به mypy می گوید که ساختار package را از روی مسیر ها تشخیص بده نه اینکه خودت حدس بزنی
+        # اگر نبود چه می شد؟ ممکن بود mypy به اشتباه ریشه(Root) پروژه رو حدس بزنه
+        # و باعث بشه از import های درست هم خطا بگیره.
