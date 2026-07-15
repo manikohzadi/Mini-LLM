@@ -6,11 +6,15 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from typing import cast
 
+from ..constants import DEFAULT_ENCODING, JSON_INDENT
 from ..exceptions import (
     InvalidVocabularyFormatError,
+    ValidationError,
     VocabularyFileNotFoundError,
 )
+from ..types import VocabularyState
 from ..vocabulary import Vocabulary
 
 from .base import VocabularyRepository
@@ -39,14 +43,14 @@ class JSONVocabularyRepository(
 
         with path.open(
             "w",
-            encoding="utf-8",
+            encoding=DEFAULT_ENCODING,
         ) as file:
 
             json.dump(
                 vocabulary.to_dict(),
                 file,
                 ensure_ascii=False,
-                indent=4,
+                indent=JSON_INDENT,
             )
 
     def load(
@@ -60,16 +64,33 @@ class JSONVocabularyRepository(
         if not path.exists():
             raise VocabularyFileNotFoundError(path)
 
-        with path.open(
-            "r",
-            encoding="utf-8",
-        ) as file:
-
-            data = json.load(file)
+        try:
+            with path.open(
+                "r",
+                encoding=DEFAULT_ENCODING,
+            ) as file:
+                data = json.load(file)
+        except json.JSONDecodeError as exc:
+            raise InvalidVocabularyFormatError(
+                "Vocabulary file contains invalid JSON."
+            ) from exc
 
         if not isinstance(data, dict):
             raise InvalidVocabularyFormatError(
                 "Vocabulary JSON must be an object."
             )
 
-        return Vocabulary.from_dict(data)
+        try:
+            return Vocabulary.from_dict(
+                cast(VocabularyState, data)
+            )
+        except (
+            AttributeError,
+            KeyError,
+            TypeError,
+            ValueError,
+            ValidationError,
+        ) as exc:
+            raise InvalidVocabularyFormatError(
+                "Vocabulary JSON has an invalid structure."
+            ) from exc
