@@ -14,7 +14,7 @@ Notes
 
 from __future__ import annotations
 
-from collections.abc import Iterable, Iterator
+from collections.abc import Iterable, Iterator, Mapping
 from dataclasses import dataclass, field
 from types import MappingProxyType
 
@@ -31,8 +31,6 @@ from .constants import (
 )
 from .exceptions import (
     FrozenVocabularyError,
-    InvalidTokenError,
-    InvalidTokenIDError,
     UnknownTokenError,
     UnknownTokenIDError,
 )
@@ -45,7 +43,9 @@ from .types import (
     TokenID,
     TokenSequence,
     TokenToID,
+    VocabularyState,
 )
+from .validators import VocabularyValidator
 
 
 @dataclass(slots=True)
@@ -88,7 +88,8 @@ class Vocabulary:
 
         frequencies: TokenFrequencies = {}
 
-        for token in SPECIAL_TOKENS:
+        for special_token in SPECIAL_TOKENS:
+            token = Token(special_token)
             token_id = TokenID(len(id_to_token))
 
             token_to_id[token] = token_id
@@ -103,7 +104,7 @@ class Vocabulary:
         )
     
     @property
-    def token_to_id_map(self) -> TokenToID:
+    def token_to_id_map(self) -> Mapping[Token, TokenID]:
         """Return a read-only view of the token→id mapping."""
         return MappingProxyType(self._token_to_id)
 
@@ -116,7 +117,7 @@ class Vocabulary:
         return tuple(self._id_to_token)
 
     @property
-    def frequencies(self) -> TokenFrequencies:
+    def frequencies(self) -> Mapping[Token, Frequency]:
         """Return a read-only view of token frequencies."""
         return MappingProxyType(self._frequencies)
     
@@ -163,6 +164,8 @@ class Vocabulary:
             If the token does not exist.
         """
 
+        VocabularyValidator.validate_token(token)
+
         try:
             return self._token_to_id[token]
         except KeyError as exc:
@@ -178,6 +181,8 @@ class Vocabulary:
             If the ID does not exist.
         """
 
+        VocabularyValidator.validate_token_id(token_id)
+
         try:
             return self._id_to_token[token_id]
         except IndexError as exc:
@@ -191,7 +196,7 @@ class Vocabulary:
         self,
         tokens: TokenSequence,
         *,
-        unknown_token_id: TokenID = UNK_ID,
+        unknown_token_id: TokenID = TokenID(UNK_ID),
     ) -> list[TokenID]:
         """
         Encode a sequence of tokens into token IDs.
@@ -250,35 +255,35 @@ class Vocabulary:
     
     @property
     def pad_token(self) -> Token:
-        return PAD_TOKEN
+        return Token(PAD_TOKEN)
 
     @property
     def unk_token(self) -> Token:
-        return UNK_TOKEN
+        return Token(UNK_TOKEN)
 
     @property
     def bos_token(self) -> Token:
-        return BOS_TOKEN
+        return Token(BOS_TOKEN)
 
     @property
     def eos_token(self) -> Token:
-        return EOS_TOKEN
+        return Token(EOS_TOKEN)
 
     @property
     def pad_id(self) -> TokenID:
-        return PAD_ID
+        return TokenID(PAD_ID)
 
     @property
     def unk_id(self) -> TokenID:
-        return UNK_ID
+        return TokenID(UNK_ID)
 
     @property
     def bos_id(self) -> TokenID:
-        return BOS_ID
+        return TokenID(BOS_ID)
 
     @property
     def eos_id(self) -> TokenID:
-        return EOS_ID
+        return TokenID(EOS_ID)
     
     # ========================================================================
     # Mutation
@@ -304,14 +309,11 @@ class Vocabulary:
             If the token is empty.
         """
 
+        VocabularyValidator.validate_token(token)
+
         if self._frozen:
             raise FrozenVocabularyError(
                 "Vocabulary is frozen."
-            )
-
-        if not token:
-            raise InvalidTokenError(
-                "Token cannot be empty."
             )
 
         if token in self._token_to_id:
@@ -480,23 +482,32 @@ class Vocabulary:
     # Serialization Interface
     # ========================================================================
 
-    def to_dict(self) -> dict[str, object]:
+    def to_dict(self) -> VocabularyState:
         """
         Convert the vocabulary into a serializable dictionary.
         """
 
         return {
             "metadata": self.metadata.to_dict(),
-            "token_to_id": dict(self._token_to_id),
-            "id_to_token": list(self._id_to_token),
-            "frequencies": dict(self._frequencies),
+            "token_to_id": {
+                str(token): int(token_id)
+                for token, token_id in self._token_to_id.items()
+            },
+            "id_to_token": [
+                str(token)
+                for token in self._id_to_token
+            ],
+            "frequencies": {
+                str(token): frequency
+                for token, frequency in self._frequencies.items()
+            },
             "frozen": self._frozen,
         }
 
     @classmethod
     def from_dict(
         cls,
-        data: dict[str, object],
+        data: VocabularyState,
     ) -> "Vocabulary":
         """
         Construct a vocabulary from a dictionary.
@@ -515,9 +526,13 @@ class Vocabulary:
         ]
 
         frequencies = {
-            Token(token): Frequency(freq)
+            Token(token): freq
             for token, freq in data["frequencies"].items()
         }
+
+        VocabularyValidator.validate_special_tokens(
+            data["token_to_id"]
+        )
 
         return cls(
             _token_to_id=token_to_id,
@@ -573,7 +588,8 @@ class Vocabulary:
         self._id_to_token.clear()
         self._frequencies.clear()
 
-        for token in SPECIAL_TOKENS:
+        for special_token in SPECIAL_TOKENS:
+            token = Token(special_token)
             token_id = TokenID(len(self._id_to_token))
 
             self._token_to_id[token] = token_id
