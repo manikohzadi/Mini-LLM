@@ -1,74 +1,99 @@
 """
-Custom exceptions used by the vocabulary subsystem.
+استثنا های سفارشی مورد استفاده توسط زیرسیستم واژگان.
 
-The purpose of this module is to provide a well-structured exception
-hierarchy for all vocabulary-related operations.
+هدف این ماژول ارائه یک سلسله مراتب ساختارمند برای تمام خطا های مربوط به واژگان است.
 
-Notes
+نکات
 -----
-- All custom exceptions inherit from ``VocabularyError``.
-- Built-in exceptions (TypeError, ValueError, FileNotFoundError, ...)
-  are still used where appropriate.
+- همه استثنا های سفارشی از ``VocabularyError`` ارث بری می کنند.
+- استثنا های داخلی مانند ``TypeError``, ``ValueError`` و
+  ``FileNotFoundError`` همچنان در صورت نیاز استفاده می شوند.
 """
 
 from __future__ import annotations
 
 
 class VocabularyError(Exception):
+    # این کلاس معمولا مستقیما ایجاد نمی شود. هدف آن فراهم کردن یک ریشه
+    # مشترک برای تمام خطا های اختصاصی زیرسیستم واژگان است.
     """
-    Base class for all vocabulary-related exceptions.
+    کلاس پایه برای همه استثنا های مربوط به واژگان.
     """
 
 
-# ============================================================================
-# Validation
-# ============================================================================
+# اعتبارسنجی
 
 
 class ValidationError(VocabularyError):
     """
-    Raised when validation of an object fails.
+    زمانی رخ می دهد که اعتبارسنجی یک شی با شکست مواجه شود.
     """
 
 
 class InvalidTokenError(ValidationError):
     """
-    Raised when a token is invalid.
+    برای توکن هایی استفاده می شود که از نظر ساختاری نامعتبرند. مانند:
+
+        - 123
+        - None
+        - ""
     """
 
 
 class InvalidTokenIDError(ValidationError):
     """
-    Raised when a token ID is invalid.
+    برای شناسه هایی استفاده می شود که از نظر ساختاری نامعتبرند. مانند:
+
+        - -1
+        - "2"
+        - None
+        - True
+    """
+
+
+class InvalidFrequencyError(ValidationError):
+    """
+    زمانی رخ می دهد که frequency با قرارداد نوع توکن سازگار نباشد.
+
+    frequency توکن ویژه باید صفر باشد و frequency توکن عادی باید یک عدد
+    صحیح مثبت باشد.
     """
 
 
 class InvalidVocabularyError(ValidationError):
     """
-    Raised when a vocabulary object is invalid.
+    زمانی رخ می دهد که اجزای Vocabulary با یکدیگر سازگار نباشند.
     """
 
 
 class InvalidMetadataError(ValidationError):
     """
-    Raised when metadata is invalid.
+    زمانی رخ می دهد که Metadata نامعتبر باشد. مانند زبان خالی, نام نامعتبر
+    یا تاریخ نامعتبر.
     """
 
 
-# ============================================================================
-# Lookup
-# ============================================================================
+# جستجو
 
 
-class LookupError(VocabularyError):
+class VocabularyLookupError(VocabularyError):
     """
-    Base class for lookup-related exceptions.
+    کلاس پایه برای خطا های جستجو در Vocabulary است.
+
+    استفاده از این نام مانع ایجاد تداخل مفهومی با استثنای داخلی
+    ``LookupError`` پایتون می شود.
+    """
+
+
+class LookupError(VocabularyLookupError):
+    """
+    کلاس پایه سازگار با نسخه های قبلی برای خطا های مربوط به جستجو است.
     """
 
 
 class UnknownTokenError(LookupError):
     """
-    Raised when a token does not exist.
+    زمانی رخ می دهد که مقدار توکن معتبر است, ولی در Vocabulary وجود ندارد.
     """
 
     __slots__ = ("token",)
@@ -80,7 +105,7 @@ class UnknownTokenError(LookupError):
 
 class UnknownTokenIDError(LookupError):
     """
-    Raised when a token ID does not exist.
+    زمانی رخ می دهد که شناسه توکن در Vocabulary وجود نداشته باشد.
     """
 
     __slots__ = ("token_id",)
@@ -91,57 +116,86 @@ class UnknownTokenIDError(LookupError):
 
 
 # ============================================================================
-# Builder
+# سازنده
 # ============================================================================
 
 
 class BuilderError(VocabularyError):
     """
-    Base class for builder-related exceptions.
+    کلاس پایه برای خطا های مربوط به ساخت Vocabulary.
     """
 
 
 class EmptyCorpusError(BuilderError):
     """
-    Raised when attempting to build a vocabulary from an empty corpus.
+    زمانی رخ می دهد که ساخت Vocabulary از یک پیکره خالی درخواست شود.
     """
 
 
 class DuplicateTokenError(BuilderError):
     """
-    Raised when duplicate reserved tokens are detected.
+    زمانی رخ می دهد که میان توکن های رزرو شده مقدار تکراری وجود داشته باشد.
     """
 
 
 # ============================================================================
-# Repository
+# مخزن
 # ============================================================================
 
 
 class RepositoryError(VocabularyError):
     """
-    Base class for repository-related exceptions.
+    کلاس پایه برای خطا های مربوط به مخزن Vocabulary.
     """
 
 
 class SaveVocabularyError(RepositoryError):
     """
-    Raised when saving a vocabulary fails.
+    زمانی رخ می دهد که ذخیره کردن Vocabulary با شکست مواجه شود.
     """
 
 
 class LoadVocabularyError(RepositoryError):
     """
-    Raised when loading a vocabulary fails.
+    زمانی رخ می دهد که بارگذاری Vocabulary با شکست مواجه شود.
+    """
+
+
+# ============================================================================
+# سریال ساز
+# ============================================================================
+
+
+class SerializerError(VocabularyError):
+    """
+    کلاس پایه برای خطا های مربوط به سریال سازی و بازیابی Vocabulary.
+    """
+
+
+class SerializationError(SerializerError, SaveVocabularyError):
+    """
+    زمانی رخ می دهد که تبدیل Vocabulary به داده قابل ذخیره با شکست مواجه شود.
+    """
+
+
+class DeserializationError(SerializerError, LoadVocabularyError):
+    """
+    زمانی رخ می دهد که بازسازی Vocabulary از داده ذخیره شده با شکست مواجه شود.
+    """
+
+
+class UnsupportedFormatError(SerializerError):
+    """
+    زمانی رخ می دهد که فرمت درخواست شده توسط سریال ساز پشتیبانی نشود.
     """
 
 
 class VocabularyFileNotFoundError(
-    LoadVocabularyError,
+    DeserializationError,
     FileNotFoundError,
 ):
     """
-    Raised when a vocabulary file does not exist.
+    زمانی رخ می دهد که فایل Vocabulary در مسیر مورد نظر وجود نداشته باشد.
     """
 
     __slots__ = ("path",)
@@ -151,49 +205,40 @@ class VocabularyFileNotFoundError(
         super().__init__(f"Vocabulary file not found: {path}")
 
 
-class InvalidVocabularyFormatError(LoadVocabularyError):
+class InvalidVocabularyFormatError(DeserializationError):
     """
-    Raised when persisted vocabulary data has an invalid format.
+    زمانی رخ می دهد که داده ذخیره شده Vocabulary ساختار معتبر نداشته باشد.
     """
+
+
+class UnsupportedVocabularyFormatVersionError(SerializerError):
+    """
+    زمانی رخ می دهد که داده سریال شده از نسخه فرمت پشتیبانی نشده استفاده کند.
+    """
+
+    __slots__ = ("found_version", "supported_version")
+
+    def __init__(
+        self,
+        found_version: object,
+        supported_version: int,
+    ) -> None:
+        self.found_version = found_version
+        self.supported_version = supported_version
+        super().__init__(
+            "Unsupported vocabulary format version: "
+            f"found {found_version!r}, supported {supported_version}."
+        )
 
 
 # ============================================================================
-# Serializer
-# ============================================================================
-
-
-class SerializerError(VocabularyError):
-    """
-    Base class for serializer-related exceptions.
-    """
-
-
-class SerializationError(SerializerError):
-    """
-    Raised when serialization fails.
-    """
-
-
-class DeserializationError(SerializerError):
-    """
-    Raised when deserialization fails.
-    """
-
-
-class UnsupportedFormatError(SerializerError):
-    """
-    Raised when a serialization format is unsupported.
-    """
-
-
-# ============================================================================
-# State
+# وضعیت
 # ============================================================================
 
 
 class FrozenVocabularyError(VocabularyError):
     """
-    Raised when attempting to modify a frozen vocabulary.
+    زمانی رخ می دهد که تغییر دادن یک Vocabulary منجمد شده درخواست شود.
     """
 
 
@@ -202,8 +247,10 @@ __all__ = (
     "ValidationError",
     "InvalidTokenError",
     "InvalidTokenIDError",
+    "InvalidFrequencyError",
     "InvalidVocabularyError",
     "InvalidMetadataError",
+    "VocabularyLookupError",
     "LookupError",
     "UnknownTokenError",
     "UnknownTokenIDError",
@@ -213,11 +260,12 @@ __all__ = (
     "RepositoryError",
     "SaveVocabularyError",
     "LoadVocabularyError",
-    "VocabularyFileNotFoundError",
-    "InvalidVocabularyFormatError",
     "SerializerError",
     "SerializationError",
     "DeserializationError",
     "UnsupportedFormatError",
+    "VocabularyFileNotFoundError",
+    "InvalidVocabularyFormatError",
+    "UnsupportedVocabularyFormatVersionError",
     "FrozenVocabularyError",
 )

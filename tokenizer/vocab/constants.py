@@ -17,7 +17,9 @@ from typing import Final # Final به Type Checker می گوید متغیر نب
 
 # Library
 
-DEFAULT_ENCODING: Final[str] = "utf-8" # انکودینگ پیش فرض که برای ذخیره سازی توکن های زبان فارسی مهم است
+VOCAB_FILE_ENCODING: Final[str] = "utf-8" # انکودینگ ثابت فایل Vocabulary در Serializer استاندارد پروژه است
+
+DEFAULT_ENCODING: Final[str] = VOCAB_FILE_ENCODING # انکودینگ پیش فرض که برای ذخیره سازی توکن های زبان فارسی مهم است
 
 VOCAB_FORMAT_VERSION: Final[int] = 1 # نسخه فرمت که اگر در آینده ساختار فایل تغییر کنه می تونیم افزایشش بدیم و این کار برای سازگاری نسخه ها مفید است.
 
@@ -51,11 +53,24 @@ BOS_ID: Final[int] = 2
 
 EOS_ID: Final[int] = 3
 
+SPECIAL_TOKEN_ID_PAIRS: Final[tuple[tuple[str, int], ...]] = (
+    (PAD_TOKEN, PAD_ID),
+    (UNK_TOKEN, UNK_ID),
+    (BOS_TOKEN, BOS_ID),
+    (EOS_TOKEN, EOS_ID),
+)
+
+SPECIAL_TOKEN_IDS: Final[tuple[int, ...]] = tuple(
+    token_id for _, token_id in SPECIAL_TOKEN_ID_PAIRS
+)
+
 # Builder Defaults
 
 DEFAULT_MIN_FREQUENCY: Final[int] = 1 # حداقل تعداد تکرار لازم برای ورود توکن به Vocabulary است.
 
 DEFAULT_MAX_VOCAB_SIZE: Final[int] = 100_000 # حداکثر تعداد توکن های عادی Vocabulary را به جز توکن های ویژه مشخص می کند
+
+DEFAULT_MAX_NORMAL_TOKEN_COUNT: Final[int] = DEFAULT_MAX_VOCAB_SIZE
 # نکته: _ فقط برای خوانایی کد است و پایتون همان 100000 را در نظر می گیرد
 
 # Serialization
@@ -69,6 +84,7 @@ JSON_EXTENSION: Final[str] = ".json" # پسوند استاندارد فایل JS
 # این قسمت مشخص می کند هنگام Import ستاره ای, چه نام هایی عمومی محسوب شوند.
 
 __all__ = (
+    "VOCAB_FILE_ENCODING",
     "DEFAULT_ENCODING",
     "VOCAB_FORMAT_VERSION",
     "PAD_TOKEN",
@@ -81,8 +97,11 @@ __all__ = (
     "UNK_ID",
     "BOS_ID",
     "EOS_ID",
+    "SPECIAL_TOKEN_ID_PAIRS",
+    "SPECIAL_TOKEN_IDS",
     "DEFAULT_MIN_FREQUENCY",
     "DEFAULT_MAX_VOCAB_SIZE",
+    "DEFAULT_MAX_NORMAL_TOKEN_COUNT",
     "JSON_INDENT",
     "JSON_EXTENSION",
 )
