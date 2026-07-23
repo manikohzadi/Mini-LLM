@@ -4,11 +4,10 @@ Vocabulary validators.
 
 from __future__ import annotations
 
-from .constants import SPECIAL_TOKENS
-from .exceptions import (
-    InvalidTokenError,
-    InvalidTokenIDError,
-)
+from collections.abc import Mapping, Sequence
+from typing import Any
+
+from ._internal.validation import VocabularyValidator as _VocabularyValidator
 
 
 class VocabularyValidator:
@@ -22,15 +21,7 @@ class VocabularyValidator:
         Validate a token.
         """
 
-        if not isinstance(token, str):
-            raise InvalidTokenError(
-                "Token must be a string."
-            )
-
-        if token == "":
-            raise InvalidTokenError(
-                "Token cannot be empty."
-            )
+        _VocabularyValidator.validate_token(token)
 
     @staticmethod
     def validate_token_id(token_id: int) -> None:
@@ -38,15 +29,7 @@ class VocabularyValidator:
         Validate a token ID.
         """
 
-        if not isinstance(token_id, int):
-            raise InvalidTokenIDError(
-                "Token ID must be an integer."
-            )
-
-        if token_id < 0:
-            raise InvalidTokenIDError(
-                "Token ID cannot be negative."
-            )
+        _VocabularyValidator.validate_token_id(token_id)
 
     @staticmethod
     def validate_special_tokens(
@@ -56,10 +39,33 @@ class VocabularyValidator:
         Ensure every special token exists.
         """
 
-        for token in SPECIAL_TOKENS:
+        _VocabularyValidator.validate_special_tokens(token_to_id)
 
-            if token not in token_to_id:
+    @staticmethod
+    def validate_frequency(frequency: object) -> None:
+        """Validate the shared non-negative frequency representation."""
 
-                raise InvalidTokenError(
-                    f"Missing special token: {token}"
-                )
+        _VocabularyValidator.validate_frequency(frequency)
+
+    @staticmethod
+    def validate_normal_frequency(frequency: object) -> None:
+        """Require a strictly positive frequency for a normal token."""
+
+        _VocabularyValidator.validate_normal_frequency(frequency)
+
+    @staticmethod
+    def validate_vocabulary_state(
+        token_to_id: Mapping[Any, Any],
+        id_to_token: Sequence[Any],
+        frequencies: Mapping[Any, Any],
+    ) -> None:
+        """Validate complete vocabulary state through the central rules."""
+
+        _VocabularyValidator.validate_vocabulary_state(
+            token_to_id,
+            id_to_token,
+            frequencies,
+        )
+
+
+__all__ = ("VocabularyValidator",)

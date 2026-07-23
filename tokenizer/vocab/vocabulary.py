@@ -18,6 +18,8 @@ from collections.abc import Iterable, Iterator, Mapping
 from dataclasses import dataclass, field
 from types import MappingProxyType
 
+from ._internal.helpers import create_special_token_state
+from ._internal.validation import VocabularyValidator
 from .constants import (
     BOS_ID,
     BOS_TOKEN,
@@ -31,6 +33,9 @@ from .constants import (
 )
 from .exceptions import (
     FrozenVocabularyError,
+    InvalidFrequencyError,
+    InvalidMetadataError,
+    InvalidVocabularyError,
     UnknownTokenError,
     UnknownTokenIDError,
 )
@@ -45,7 +50,6 @@ from .types import (
     TokenToID,
     VocabularyState,
 )
-from .validators import VocabularyValidator
 
 
 @dataclass(slots=True)
@@ -73,6 +77,23 @@ class Vocabulary:
 
     _frozen: bool = False
 
+    def __post_init__(self) -> None:
+        """Validate all state before the vocabulary becomes usable."""
+
+        if not isinstance(self.metadata, VocabularyMetadata):
+            raise InvalidMetadataError(
+                "metadata must be a VocabularyMetadata instance."
+            )
+
+        if not isinstance(self._frozen, bool):
+            raise InvalidVocabularyError("frozen must be a boolean.")
+
+        VocabularyValidator.validate_vocabulary_state(
+            self._token_to_id,
+            self._id_to_token,
+            self._frequencies,
+        )
+
     @classmethod
     def empty(
         cls,
@@ -82,24 +103,12 @@ class Vocabulary:
         Create an empty vocabulary containing only special tokens.
         """
 
-        token_to_id: TokenToID = {}
-
-        id_to_token: IDToToken = []
-
-        frequencies: TokenFrequencies = {}
-
-        for special_token in SPECIAL_TOKENS:
-            token = Token(special_token)
-            token_id = TokenID(len(id_to_token))
-
-            token_to_id[token] = token_id
-            id_to_token.append(token)
-            frequencies[token] = 0
+        state = create_special_token_state()
 
         return cls(
-            _token_to_id=token_to_id,
-            _id_to_token=id_to_token,
-            _frequencies=frequencies,
+            _token_to_id=state.token_to_id,
+            _id_to_token=state.id_to_token,
+            _frequencies=state.frequencies,
             metadata=metadata or VocabularyMetadata(),
         )
     
@@ -204,10 +213,20 @@ class Vocabulary:
         Unknown tokens are mapped to ``unknown_token_id``.
         """
 
-        return [
-            self._token_to_id.get(token, unknown_token_id)
-            for token in tokens
-        ]
+        VocabularyValidator.validate_token_id(unknown_token_id)
+
+        if not self.has_token_id(unknown_token_id):
+            raise UnknownTokenIDError(unknown_token_id)
+
+        encoded: list[TokenID] = []
+
+        for token in tokens:
+            VocabularyValidator.validate_token(token)
+            encoded.append(
+                self._token_to_id.get(token, unknown_token_id)
+            )
+
+        return encoded
 
     def decode(
         self,
@@ -241,6 +260,8 @@ class Vocabulary:
             If the token does not exist.
         """
 
+        VocabularyValidator.validate_token(token)
+
         try:
             return self._frequencies[token]
         except KeyError as exc:
@@ -251,7 +272,7 @@ class Vocabulary:
         Return True if the given ID exists.
         """
 
-        return 0 <= token_id < len(self._id_to_token)
+        return self.has_token_id(token_id)
     
     @property
     def pad_token(self) -> Token:
@@ -293,12 +314,16 @@ class Vocabulary:
         self,
         token: Token,
         *,
-        frequency: Frequency = 0,
+        frequency: Frequency | None = None,
     ) -> TokenID:
         """
-        Add a token to the vocabulary.
+        Add a normal token with an explicit positive frequency.
 
-        If the token already exists, its existing ID is returned.
+        If the token already exists and ``frequency`` is omitted, its current
+        ID is returned. If a frequency is provided for an existing token, it
+        must match the stored value.
+
+        Special tokens are created internally and always keep frequency zero.
 
         Raises
         ------
@@ -306,10 +331,17 @@ class Vocabulary:
             If the vocabulary is frozen.
 
         InvalidTokenError
-            If the token is empty.
+            If the token is structurally invalid.
+
+        InvalidFrequencyError
+            If a new normal token has no frequency, has frequency zero, or an
+            existing token is supplied with a conflicting frequency.
         """
 
         VocabularyValidator.validate_token(token)
+
+        if frequency is not None:
+            VocabularyValidator.validate_frequency(frequency)
 
         if self._frozen:
             raise FrozenVocabularyError(
@@ -317,7 +349,20 @@ class Vocabulary:
             )
 
         if token in self._token_to_id:
+            stored_frequency = self._frequencies[token]
+            if frequency is not None and frequency != stored_frequency:
+                raise InvalidFrequencyError(
+                    f"Token {token!r} already has frequency "
+                    f"{stored_frequency}, not {frequency}."
+                )
             return self._token_to_id[token]
+
+        if frequency is None:
+            raise InvalidFrequencyError(
+                "Frequency is required when adding a new normal token."
+            )
+
+        VocabularyValidator.validate_normal_frequency(frequency)
 
         token_id = TokenID(len(self._id_to_token))
 
@@ -331,16 +376,27 @@ class Vocabulary:
     
     def extend(
         self,
-        tokens: Iterable[Token],
+        token_frequencies: (
+            Mapping[Token, Frequency]
+            | Iterable[tuple[Token, Frequency]]
+        ),
     ) -> None:
         """
-        Add multiple tokens.
+        Add multiple normal tokens with explicit positive frequencies.
 
-        Existing tokens are ignored.
+        A mapping or an iterable of ``(token, frequency)`` pairs is accepted.
+        Existing tokens are accepted only when the supplied frequency matches
+        the stored frequency.
         """
 
-        for token in tokens:
-            self.add_token(token)
+        items = (
+            token_frequencies.items()
+            if isinstance(token_frequencies, Mapping)
+            else token_frequencies
+        )
+
+        for token, frequency in items:
+            self.add_token(token, frequency=frequency)
 
     # ========================================================================
     # Freeze
@@ -452,6 +508,8 @@ class Vocabulary:
         Return whether the token ID exists.
         """
 
+        VocabularyValidator.validate_token_id(token_id)
+
         return 0 <= token_id < len(self._id_to_token)
     
     # ========================================================================
@@ -534,12 +592,17 @@ class Vocabulary:
             data["token_to_id"]
         )
 
+        frozen = data["frozen"]
+
+        if not isinstance(frozen, bool):
+            raise InvalidVocabularyError("frozen must be a boolean.")
+
         return cls(
             _token_to_id=token_to_id,
             _id_to_token=id_to_token,
             _frequencies=frequencies,
             metadata=metadata,
-            _frozen=bool(data["frozen"]),
+            _frozen=frozen,
         )
     
     # ========================================================================
@@ -584,17 +647,11 @@ class Vocabulary:
                 "Vocabulary is frozen."
             )
 
-        self._token_to_id.clear()
-        self._id_to_token.clear()
-        self._frequencies.clear()
+        state = create_special_token_state()
 
-        for special_token in SPECIAL_TOKENS:
-            token = Token(special_token)
-            token_id = TokenID(len(self._id_to_token))
-
-            self._token_to_id[token] = token_id
-            self._id_to_token.append(token)
-            self._frequencies[token] = 0
+        self._token_to_id = state.token_to_id
+        self._id_to_token = state.id_to_token
+        self._frequencies = state.frequencies
 
     def __reversed__(self) -> Iterator[Token]:
         """
