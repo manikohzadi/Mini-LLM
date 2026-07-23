@@ -39,13 +39,13 @@ jobs: # اینجا کار هایی که باید انجام شوند تعریف 
         # یعنی پایتون را از matrix بگیر
 
         # 3. Compile کردن کد
-      - name: Compile vocabulary package
-        run: python -m compileall -q tokenizer/vocab tests/vocab_tests
+      - name: Compile vocabulary and tokenizer package
+        run: python -m compileall -q tokenizer tests/vocab_tests
         # این دستور:
         # 1. python -m compileall: فایل های Python را به bytecode تبدیل می کند که یعنی یک فایل .py رو به .pyc, .pyo یا .pyd تبدیل می کند.
         # 2. -q: به معنی quiet است یعنی در خروجی هیچ اطلاعات اضافی نمی دهد مگر اینکه به خطا بخورد.
         # 3. هدف: پیدا کردن خطا های Syntax
-        # 4. tokenizer/vocab tests/vocab_tests: مسیر ها که شامل کد اصلی پروژه و کد تست ها است.
+        # 4. tokenizer tests/vocab_tests: مسیر ها که شامل کد اصلی پروژه و کد تست ها است.
         # 5. -m: اجرای یک ماژول که در CI ما ماژول داخلی compileall را اجرا می کند
 
         # 4. اجرای تست ها
@@ -87,6 +87,7 @@ jobs: # اینجا کار هایی که باید انجام شوند تعریف 
         run: >- # این یک دستور چند خطی YAML است یعنی تمام کد های زیر در نهایت به یک خط تبدیل می شوند
           python -m mypy --explicit-package-bases
           tokenizer/vocab
+          tokenizer/build_vocab.py
           tests/vocab_tests
         # --explicit-package-bases: به mypy می گوید که ساختار package را از روی مسیر ها تشخیص بده نه اینکه خودت حدس بزنی
         # اگر نبود چه می شد؟ ممکن بود mypy به اشتباه ریشه(Root) پروژه رو حدس بزنه
