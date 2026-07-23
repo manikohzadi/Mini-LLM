@@ -10,7 +10,6 @@ from collections.abc import Iterator
 from ..constants import (
     DEFAULT_MAX_VOCAB_SIZE,
     DEFAULT_MIN_FREQUENCY,
-    SPECIAL_TOKENS,
 )
 from ..metadata import VocabularyMetadata
 from ..types import (
@@ -20,10 +19,10 @@ from ..types import (
 )
 from ..vocabulary import Vocabulary
 
-from .base import VocabularyBuilder
+from .word import WordVocabularyBuilder
 
 
-class DefaultVocabularyBuilder(VocabularyBuilder):
+class DefaultVocabularyBuilder(WordVocabularyBuilder):
     """
     Standard vocabulary builder.
 
@@ -44,9 +43,18 @@ class DefaultVocabularyBuilder(VocabularyBuilder):
         max_vocabulary_size: int = DEFAULT_MAX_VOCAB_SIZE,
     ) -> None:
 
-        self._min_frequency = min_frequency
+        super().__init__(
+            min_frequency=min_frequency,
+            max_normal_token_count=max_vocabulary_size,
+        )
 
         self._max_vocabulary_size = max_vocabulary_size
+
+    @property
+    def max_vocabulary_size(self) -> int:
+        """Return the compatibility name for the normal token limit."""
+
+        return self._max_vocabulary_size
 
     def build(
         self,
@@ -58,21 +66,10 @@ class DefaultVocabularyBuilder(VocabularyBuilder):
         Build a vocabulary from a tokenized corpus.
         """
 
-        vocabulary = Vocabulary.empty(
+        return super().build(
+            corpus,
             metadata=metadata,
         )
-
-        counter = self._count_tokens(corpus)
-
-        for token, frequency in self._select_tokens(counter):
-            vocabulary.add_token(
-                token,
-                frequency=frequency,
-            )
-
-        vocabulary.freeze()
-
-        return vocabulary
     
     def _count_tokens(
         self,
@@ -82,12 +79,7 @@ class DefaultVocabularyBuilder(VocabularyBuilder):
         Count token frequencies.
         """
 
-        counter: Counter[Token] = Counter()
-
-        for sentence in corpus:
-            counter.update(sentence)
-
-        return counter
+        return super()._count_tokens(corpus)
     
     def _select_tokens(
         self,
@@ -97,22 +89,4 @@ class DefaultVocabularyBuilder(VocabularyBuilder):
         Yield valid vocabulary tokens.
         """
 
-        if self._max_vocabulary_size <= 0:
-            return
-
-        added = 0
-
-        for token, frequency in counter.most_common():
-
-            if token in SPECIAL_TOKENS:
-                continue
-
-            if frequency < self._min_frequency:
-                continue
-
-            if added >= self._max_vocabulary_size:
-                break
-
-            yield token, frequency
-
-            added += 1
+        yield from super()._select_tokens(counter)
