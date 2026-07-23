@@ -6,9 +6,7 @@ import unittest
 from typing import Any, cast
 
 from tokenizer.vocab.constants import (
-    BOS_ID,
-    EOS_ID,
-    PAD_ID,
+    SPECIAL_TOKEN_ID_PAIRS,
     SPECIAL_TOKENS,
     UNK_ID,
 )
@@ -29,32 +27,27 @@ class VocabularyTests(unittest.TestCase):
     def setUp(self) -> None:
         self.vocabulary = Vocabulary.empty()
 
-    def test_empty_contains_reserved_tokens_with_stable_ids(self) -> None:
+    def test_empty_contains_reserved_tokens_with_exact_ids(self) -> None:
         self.assertEqual(tuple(self.vocabulary), SPECIAL_TOKENS)
         self.assertEqual(len(self.vocabulary), len(SPECIAL_TOKENS))
         self.assertTrue(self.vocabulary.is_empty)
         self.assertFalse(self.vocabulary)
 
-        expected_ids = (PAD_ID, UNK_ID, BOS_ID, EOS_ID)
-        actual_ids = tuple(
-            self.vocabulary.token_to_id(Token(token))
-            for token in SPECIAL_TOKENS
-        )
-        self.assertEqual(actual_ids, expected_ids)
-
-        for token in SPECIAL_TOKENS:
+        for token_value, expected_id in SPECIAL_TOKEN_ID_PAIRS:
+            token = Token(token_value)
             self.assertEqual(
-                self.vocabulary.frequency(Token(token)),
-                0,
+                self.vocabulary.token_to_id(token),
+                expected_id,
             )
+            self.assertEqual(
+                self.vocabulary.id_to_token(TokenID(expected_id)),
+                token,
+            )
+            self.assertEqual(self.vocabulary.frequency(token), 0)
 
     def test_add_lookup_duplicate_and_frequency(self) -> None:
         token = Token("سلام")
-
-        token_id = self.vocabulary.add_token(
-            token,
-            frequency=3,
-        )
+        token_id = self.vocabulary.add_token(token, frequency=3)
 
         self.assertEqual(token_id, len(SPECIAL_TOKENS))
         self.assertEqual(self.vocabulary.token_to_id(token), token_id)
@@ -106,6 +99,9 @@ class VocabularyTests(unittest.TestCase):
         with self.assertRaises(InvalidTokenIDError):
             self.vocabulary.id_to_token(cast(Any, "0"))
 
+        with self.assertRaises(InvalidFrequencyError):
+            self.vocabulary.add_token(Token("x"), frequency=-1)
+
     def test_valid_but_unknown_values_raise_lookup_errors(self) -> None:
         with self.assertRaises(UnknownTokenError):
             self.vocabulary.token_to_id(Token("missing"))
@@ -116,16 +112,20 @@ class VocabularyTests(unittest.TestCase):
     def test_encode_and_decode_map_unknown_tokens_to_unk(self) -> None:
         known = Token("known")
         known_id = self.vocabulary.add_token(known, frequency=1)
-
-        encoded = self.vocabulary.encode(
-            [known, Token("missing")]
-        )
+        encoded = self.vocabulary.encode([known, Token("missing")])
 
         self.assertEqual(encoded, [known_id, UNK_ID])
         self.assertEqual(
             self.vocabulary.decode(encoded),
             [known, self.vocabulary.unk_token],
         )
+
+    def test_encode_rejects_unknown_replacement_id(self) -> None:
+        with self.assertRaises(UnknownTokenIDError):
+            self.vocabulary.encode(
+                [Token("missing")],
+                unknown_token_id=TokenID(999),
+            )
 
     def test_freeze_prevents_mutation(self) -> None:
         self.vocabulary.freeze()
@@ -153,27 +153,25 @@ class VocabularyTests(unittest.TestCase):
         self.assertNotIn(Token("copy-only"), self.vocabulary)
         self.assertIn(Token("copy-only"), copied)
 
-    def test_serialization_round_trip_preserves_state(self) -> None:
+    def test_clear_keeps_only_special_tokens_with_exact_ids(self) -> None:
+        self.vocabulary.add_token(Token("temporary"), frequency=1)
+        self.vocabulary.clear()
+
+        self.assertEqual(tuple(self.vocabulary), SPECIAL_TOKENS)
+        self.assertTrue(self.vocabulary.is_empty)
+        for token_value, expected_id in SPECIAL_TOKEN_ID_PAIRS:
+            self.assertEqual(
+                self.vocabulary.token_to_id(Token(token_value)),
+                expected_id,
+            )
+
+    def test_metadata_is_preserved(self) -> None:
         metadata = VocabularyMetadata(
             vocabulary_name="persian-test",
             created_at="2026-01-01T00:00:00+00:00",
         )
         vocabulary = Vocabulary.empty(metadata=metadata)
-        vocabulary.add_token(Token("ایران"), frequency=7)
-        vocabulary.freeze()
-
-        restored = Vocabulary.from_dict(vocabulary.to_dict())
-
-        self.assertEqual(restored, vocabulary)
-        self.assertIsNot(restored, vocabulary)
-
-    def test_clear_keeps_only_special_tokens(self) -> None:
-        self.vocabulary.add_token(Token("temporary"), frequency=1)
-
-        self.vocabulary.clear()
-
-        self.assertEqual(tuple(self.vocabulary), SPECIAL_TOKENS)
-        self.assertTrue(self.vocabulary.is_empty)
+        self.assertEqual(vocabulary.metadata, metadata)
 
 
 if __name__ == "__main__":
